@@ -1,0 +1,987 @@
+---
+title: "Analysis of microRNAs identified in Amoebzoa"
+author: "Bart Edelbroek"
+date: "11/24/2021"
+output:
+  html_document:
+    code_folding: hide
+  pdf_document: default
+  word_document: default
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+
+library(ggplot2)
+library(ggpubr)
+library(ggseqlogo)
+library(Rsubread)
+library(venn)
+library(knitr)
+library(dplyr)
+library(tidyr)
+library(seqinr)
+library(RColorBrewer)
+library(ggbeeswarm)
+library(circlize)
+
+palette2 <- c("#AE2012","#CA6B02","#FFCF3B","#B5E48C","#76C893","#34A0A4","#1E6091")
+palette3 <- c("#AE2012","#FFCF3B","#E8EDED","#76C893","#34A0A4","#1E6091")
+```
+
+Quantified the number of reads mapping to different parts of the amoeba genome, E. coli, or unmapped. Plotted the length profile of the reads mapping to the genome but not rRNA. The data_in was generated using mapping_percentages.sh and extract_length_profiles.sh helper scripts.
+
+```{r pre-miR-analysis (mapping etc.), fig.height=4, fig.width=7, message=FALSE, warning=FALSE}
+species_list <- c("ddis","dfir","dfir_new","dlac","ppal","asub","dfas","ppol","acas","alen")
+labels <- c("A.castellanii","A.lenticulata","A.subglobosum","D.discoideum","D.fasciculatum","D.firmibasis","D.firmibasis","D.lacteum","P.pallidum","P.polycephalum")
+names(labels) <- c("acas","alen","asub","ddis","dfas","dfir","dfir_new","dlac","ppal","ppol")
+
+mapping_percentages_in <- matrix(scan("data_in/mapping_percentages.txt", character(), quote = ""), nrow = 4)
+mapping_percentages <- data.frame(t(mapping_percentages_in))
+mapping_percentages <- mapping_percentages %>% mutate(across(X2:X4, as.numeric))
+colnames(mapping_percentages) <- c("Species","E.coli","Unmapped","Genome")
+plotdat <- pivot_longer(mapping_percentages, cols = c("E.coli","Unmapped","Genome"))
+colnames(plotdat) <- c("species","mapped_to","reads")
+plotdat$reads <- as.numeric(plotdat$reads)
+plotdat$mapped_to <- factor(plotdat$mapped_to, levels = c("E.coli","Unmapped","Genome"))
+
+
+acas_LP <- cbind(read.delim("data_in/acas/length_profile.txt", sep = " ", row.names = NULL, header = F),V4 = "acas")
+alen_LP <- cbind(read.delim("data_in/alen/length_profile.txt", sep = " ", row.names = NULL, header = F),V4 = "alen")
+asub_LP <- cbind(read.delim("data_in/asub/length_profile.txt", sep = " ", row.names = NULL, header = F),V4 = "asub")
+dfas_LP <- cbind(read.delim("data_in/dfas/length_profile.txt", sep = " ", row.names = NULL, header = F),V4 = "dfas")
+ddis_LP <- cbind(read.delim("data_in/ddis/length_profile.txt", sep = " ", row.names = NULL, header = F),V4 = "ddis")
+dfir_new_LP <- cbind(read.delim("data_in/dfir_new/length_profile.txt", sep = " ", row.names = NULL, header = F),V4 = "dfir_new")
+dlac_LP <- cbind(read.delim("data_in/dlac/length_profile.txt", sep = " ", row.names = NULL, header = F),V4 = "dlac")
+dfir_LP <- cbind(read.delim("data_in/dfir/length_profile.txt", sep = " ", row.names = NULL, header = F),V4 = "dfir")
+ppal_LP <- cbind(read.delim("data_in/ppal/length_profile.txt", sep = " ", row.names = NULL, header = F),V4 = "ppal")
+ppol_LP <- cbind(read.delim("data_in/ppol/length_profile.txt", sep = " ", row.names = NULL, header = F),V4 = "ppol")
+
+all_LP <- rbind(acas_LP,alen_LP,asub_LP,dfas_LP,ddis_LP,dlac_LP,dfir_LP,dfir_new_LP,ppal_LP,ppol_LP)
+all_LP$V2 <- as.numeric(substr(all_LP$V2,1,2))
+all_LP$V4 <- factor(all_LP$V4, levels = c("ddis","dfir","dfir_new","dlac","ppal","asub","dfas","ppol","acas","alen"))
+all_LP$V3[all_LP$V3=="TEmerged"
+          |all_LP$V3=="complementary_TEmerged"] <- "transposon"
+all_LP$V3[all_LP$V3=="complementary_rRNA"|
+            all_LP$V3=="complementary_snRNA"|
+            all_LP$V3=="complementary_tRNA"|
+            all_LP$V3=="complementary_ncRNA"] <- "intergenicRNA"
+all_LP$V3[all_LP$V3=="ncRNA"] <- "other_ncRNA"
+all_LP <- all_LP %>% group_by(V2,V3,V4) %>% summarise(V1 = sum(V1))
+all_LP$V3 <- factor(all_LP$V3, levels = c("intergenicRNA","transposon","tRNA","snRNA","other_ncRNA","mRNA","complementary_mRNA","rRNA"))
+grouped_all_LP <- all_LP %>% group_by(V4 ,V3, ) %>% summarise(reads = sum(V1))
+all_LP$V1 <- all_LP$V1/1E6
+
+grouped_all_LP[grouped_all_LP$V3 != "rRNA",] %>% 
+  group_by(V4) %>% 
+  summarise(reads = sum(reads)) %>% 
+  arrange(factor(V4, levels = mapping_percentages$Species)) %>% 
+  pull(reads) -> mapping_percentages$Genome_otherRNA
+
+grouped_all_LP[grouped_all_LP$V3 == "rRNA",] %>%
+  arrange(factor(V4, levels = mapping_percentages$Species)) %>%
+  pull(reads) -> mapping_percentages$Genome_rRNA
+
+
+plotdat <- pivot_longer(mapping_percentages[,-4], cols = c("E.coli","Unmapped","Genome_rRNA","Genome_otherRNA"))
+colnames(plotdat) <- c("species","mapped_to","reads")
+plotdat$mapped_to <- factor(plotdat$mapped_to, levels = c("E.coli","Unmapped","Genome_rRNA","Genome_otherRNA"))
+plotdat$species <- factor(plotdat$species, levels = rev(species_list))
+
+a <- ggplot(plotdat[plotdat$species!="dfir_new",], aes(x = species, y = reads, fill = mapped_to))+
+  geom_bar(stat = "identity", color="#222222")+
+  labs(fill = "mapped to", y = "number of reads", x="")+
+  scale_fill_manual(values =  palette2[c(1,3,6,7)])+
+    theme(axis.text.y= element_text(color = "black", face = "italic"),   
+          axis.title.x = element_text(size = 12),
+        legend.key.size = unit(0.3, 'cm'),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        panel.background = element_rect(fill = NA),
+        panel.grid = element_line(colour = "grey90"),
+        strip.background = element_rect(fill= NA))+
+  scale_x_discrete(labels = labels)+ coord_flip()
+a
+ggsave("plots/mapping_numbers.tiff", a, device = "tiff", dpi = 200, width = 6 , height =  3)
+
+ggplot(plotdat[plotdat$species!="dfir_new",], aes(x = species, y = reads, fill = mapped_to))+
+  geom_bar(stat = "identity",position = "fill", color="#222222")+
+  labs(fill = "mapped to", y = "proportion of reads", x="")+
+  scale_fill_manual(values =  palette2[c(1,3,6,7)])+
+    theme(axis.text.x= element_text(angle=45, hjust = 1, color = "black", face = "italic"),        
+        panel.background = element_rect(fill = NA),
+        panel.grid = element_line(colour = "grey90"))+
+  scale_x_discrete(labels = labels)
+```
+
+
+
+```{r plot length profile, fig.height=8, fig.width=10, message=FALSE, warning=FALSE}
+b <- ggplot(all_LP[all_LP$V3!="other_ncRNA"&all_LP$V3!="snRNA"&all_LP$V4!="dfir_new"&all_LP$V3!="rRNA",],aes(V2,V1, fill = V3))+ 
+  facet_wrap(~V4, scales = "free", ncol = 3, labeller = labeller(V4 = labels))+
+  geom_bar(stat = "identity", color="#333333", size = 0.6, width = 0.8)+
+  labs(y = "million mapped reads", x="read length",fill="RNA type")+
+    scale_fill_manual(values  = rev(palette2[-c(5)]))+
+    theme(legend.key.size = unit(0.5, 'cm'),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        panel.background = element_rect(fill = "#EEEEEE"),
+        panel.grid = element_line(colour = "grey90"),
+        strip.background = element_rect(fill= "#E3E3E3"),
+        strip.text = element_text(face= "italic", size = 12))
+
+plotdat <- all_LP[all_LP$V4!="dfir_new"&all_LP$V3!="rRNA",]
+plotdat %>% group_by(V2,V4) %>% summarise(sum(V1)) -> plotdat
+colnames(plotdat) <- c("length","species","million_reads")
+b <- ggplot(plotdat,aes(length,million_reads))+ 
+  facet_wrap(~species, scales = "free", ncol = 3, labeller = labeller(species = labels))+
+  geom_bar(stat = "identity", color="#333333", aes(fill = "Genome_otherRNA"), size = 0.6, width = 0.8)+
+  labs(y = "million mapped reads", x="read length",fill="RNA type")+
+    scale_fill_manual(values  = rev(palette2[-c(5)]))+
+    theme(legend.key.size = unit(0.5, 'cm'),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        panel.background = element_rect(fill = "#EEEEEE"),
+        panel.grid = element_line(colour = "grey90"),
+        strip.background = element_rect(fill= "#E3E3E3"),
+        strip.text = element_text(face= "italic", size = 12))
+b
+ggsave("plots/length_distribution.png", b, device = "png", dpi = 200, width = 9, height = 7)
+
+```
+
+After running the miRNA curation python script, the characteristics of each of the miRNA candidates is summarized in data_in/species/combined_analysis.tsv. Each of the miRNA candidates is analyzed by the criteria put forth in Axtell & Meyers (2018), Fromm et al. (2022), and Kozomara et al. (2014 & 2019), as summarized in figure S3. Following manual curation, a final list of high-confidence miRNAs is identified.
+
+```{r Analyze-miR-candidates, message=FALSE, warning=FALSE}
+analysis_folder <- "data_in/"
+r <- ""
+acas <- read.delim(paste0(analysis_folder,"acas",r,"/combined_analysis.tsv"))
+alen <- read.delim(paste0(analysis_folder,"alen",r,"/combined_analysis.tsv"))
+asub <- read.delim(paste0(analysis_folder,"asub",r,"/combined_analysis.tsv"))
+ddis <- read.delim(paste0(analysis_folder,"ddis",r,"/combined_analysis.tsv"))
+dfas <- read.delim(paste0(analysis_folder,"dfas",r,"/combined_analysis.tsv"))
+dfir <- read.delim(paste0(analysis_folder,"dfir",r,"/combined_analysis.tsv"))
+dlac <- read.delim(paste0(analysis_folder,"dlac",r,"/combined_analysis.tsv"))
+ppal <- read.delim(paste0(analysis_folder,"ppal",r,"/combined_analysis.tsv"))
+ppol <- read.delim(paste0(analysis_folder,"ppol",r,"/combined_analysis.tsv"))
+dfirnew <- read.delim(paste0(analysis_folder,"dfir_new",r,"/combined_analysis.tsv"))
+dfirnew$species <- "dfir_new"
+
+#ddis_existing <- read.delim(paste0(analysis_folder,"ddis_existing_miRNAs",r,"/combined_analysis.tsv"))
+
+
+comb <- rbind(acas,alen,asub,dfas,ddis,ppal,ppol,dlac,dfir,dfirnew)
+comb <- comb %>% group_by(species) %>% distinct(pri.miRNA, .keep_all = T)
+comb$positions <- substr(comb$positions,2,nchar(comb$positions)-1)
+#comb <- rbind(comb,ddis_existing[,-length(ddis_existing)])
+
+## Axtell selection
+comb$axtellpairing <- FALSE
+comb$axtellpairing[nchar(comb$positions)<20] <- comb$unpaired_bases[nchar(comb$positions)<20]+comb$bulges[nchar(comb$positions)<20] <= 5 & comb$bulges[nchar(comb$positions)<20] <= 3
+comb$axtellpairing[nchar(comb$positions)>20] <- comb$unpaired_bases[nchar(comb$positions)>20]+comb$bulges[nchar(comb$positions)>20] <= 10 & comb$bulges[nchar(comb$positions)>20] <= 6
+comb$axtellsize <- nchar(comb$pri.miRNA) <= 300
+comb$axtell_precision_1 <- (comb$lib1_axtell5p_reads+comb$lib1_axtell3p_reads)/comb$lib1_axtell_total_reads
+comb$axtell_precision_2 <- (comb$lib2_axtell5p_reads+comb$lib2_axtell3p_reads)/comb$lib2_axtell_total_reads
+comb$axtell_precision_3 <- (comb$lib3_axtell5p_reads+comb$lib3_axtell3p_reads)/comb$lib3_axtell_total_reads
+comb$axtell_expressed_libraries <- ((comb$lib1_axtell5p_reads>0)&(comb$lib1_axtell3p_reads>0))+  #5p and 3p reads in lib1
+((comb$lib2_axtell5p_reads>0)&(comb$lib2_axtell3p_reads>0))+   #5p and 3p reads in lib2
+((comb$lib3_axtell5p_reads>0)&(comb$lib3_axtell3p_reads>0))    #5p and 3p reads in lib3
+comb$axtell_generalpass <- comb$axtellsize == T &
+                           comb$axtellpairing == T &
+                           nchar(comb$mir_seq) >= 20 & nchar(comb$mir_seq) <= 24
+
+comb$axtell_pass_lib1 <- comb$axtell_generalpass == T &
+                         (comb$lib1_axtell5p_reads>0)&(comb$lib1_axtell3p_reads>0) &
+                         comb$axtell_precision_1 > 0.75
+comb$axtell_pass_lib2 <- comb$axtell_generalpass == T &
+                         (comb$lib2_axtell5p_reads>0)&(comb$lib2_axtell3p_reads>0) &
+                         comb$axtell_precision_2 > 0.75
+comb$axtell_pass_lib3 <- comb$axtell_generalpass == T &
+                         (comb$lib3_axtell5p_reads>0)&(comb$lib3_axtell3p_reads>0) &
+                         comb$axtell_precision_3 > 0.75
+comb$axtell_pass <- (comb$axtell_pass_lib1+comb$axtell_pass_lib2+comb$axtell_pass_lib3) >= 2
+
+## Mirbase selection
+comb$fivep_reads <- (comb$lib1_fivep_reads+comb$lib2_fivep_reads+comb$lib3_fivep_reads)
+comb$mirbaseprecision5p <- comb$fivep_reads/
+  (comb$lib1_fivep_total_reads+comb$lib2_fivep_total_reads+comb$lib3_fivep_total_reads)
+
+comb$threep_reads <- (comb$lib1_threep_reads+comb$lib2_threep_reads+comb$lib3_threep_reads)
+comb$mirbaseprecision3p <- comb$threep_reads/
+  (comb$lib1_threep_total_reads+comb$lib2_threep_total_reads+comb$lib3_threep_total_reads)
+
+comb$mirbase_pass <- comb$fivep_reads >= 10 &
+                  comb$threep_reads >= 10 &
+                  comb$mirbaseprecision5p >= 0.5 &
+                  comb$mirbaseprecision3p >= 0.5 &
+                  (comb$energy / nchar(comb$pri.miRNA)) <= -0.2 & 
+                  comb$percentage_paired >= 0.6 
+
+## MirGeneDB selection
+comb$loop_size <- 0
+comb$loop_size[nchar(comb$positions)<20] <- as.numeric(matrix(unlist(strsplit(comb$positions[nchar(comb$positions)<20], ",")), ncol = 4, byrow = T)[,3])-as.numeric(matrix(unlist(strsplit(comb$positions[nchar(comb$positions)<20], ",")), ncol = 4, byrow = T)[,2])-1
+comb$loop_size[nchar(comb$positions)>20] <- as.numeric(matrix(unlist(strsplit(comb$positions[nchar(comb$positions)>20], ",")), ncol = 8, byrow = T)[,5])-as.numeric(matrix(unlist(strsplit(comb$positions[nchar(comb$positions)>20], ",")), ncol = 8, byrow = T)[,4])-1
+comb$mirgenedb_precision <- (comb$threep_reads+comb$fivep_reads)/(comb$lib1_axtell_total_reads+comb$lib2_axtell_total_reads+comb$lib3_axtell_total_reads)
+comb$mirgenedb_pass <- 
+  nchar(comb$mir_seq) >= 20 & nchar(comb$mir_seq) <= 26 &
+  comb$paired_bases >= 16 & (comb$unpaired_bases > 0 | comb$bulges > 0 | comb$overhang_unpaired_bases > 0) &
+  comb$loop_size >= 8 & comb$mirgenedb_precision >= 0.9 &
+  comb$threep_reads > 0 & comb$fivep_reads > 0
+  
+ddis_existing <- t(data.frame(read.fasta("data_in/ddis_miRNAs.fa", as.string = T, set.attributes = F, forceDNAtolower = F)))
+comb$cluster <- comb$miRNA.ID
+comb$miRNA.ID[comb$species=="ddis"][which(comb$mir_seq[comb$species=="ddis"]%in%ddis_existing)] <- rownames(ddis_existing)[na.omit(match(comb$mir_seq[comb$species=="ddis"],ddis_existing))]
+
+
+
+comb[is.na(comb)] <- 0
+
+comb$axtell_pass[comb$axtell_pass_lib1+comb$axtell_pass_lib2+comb$axtell_pass_lib3==0] <-
+  paste0(round((comb$axtell_precision_1[comb$axtell_pass_lib1+comb$axtell_pass_lib2+comb$axtell_pass_lib3==0]+
+  comb$axtell_precision_2[comb$axtell_pass_lib1+comb$axtell_pass_lib2+comb$axtell_pass_lib3==0]+
+  comb$axtell_precision_3[comb$axtell_pass_lib1+comb$axtell_pass_lib2+comb$axtell_pass_lib3==0])/3*100,0),"% precision")
+comb$axtell_pass[comb$axtell_pass_lib1+comb$axtell_pass_lib2+comb$axtell_pass_lib3==1] <- "one_library"
+comb$axtell_pass[comb$axtell_generalpass==0] <- paste0(comb$bulges[comb$axtell_generalpass==0]," bulges")
+
+comb$mirbase_pass[comb$threep_reads<10] <- paste0(comb$threep_reads[comb$threep_reads<10]," miR* reads")
+comb$mirbase_pass[comb$fivep_reads<10] <- paste0(comb$fivep_reads[comb$fivep_reads<10]," miR* reads")
+comb$mirbase_pass[comb$mirbaseprecision3p<0.5] <- paste0(round(comb$mirbaseprecision3p[comb$mirbaseprecision3p<0.5]*100,0),"% miR* precision")
+comb$mirbase_pass[comb$mirbaseprecision5p<0.5] <- paste0(round(comb$mirbaseprecision5p[comb$mirbaseprecision5p<0.5]*100,0),"% miR* precision")
+
+comb$mirgenedb_pass[comb$mirgenedb_precision<0.9] <- paste0(round(comb$mirgenedb_precision[comb$mirgenedb_precision<0.9]*100,0),"% precision")
+comb$mirgenedb_pass[comb$unpaired_bases==0&comb$bulges==0&comb$overhang_unpaired_bases==0] <- "0 unpaired bases"
+comb$mirgenedb_pass[comb$threep_reads==0] <- "0 threep_reads"
+comb$mirgenedb_pass[comb$fivep_reads==0] <- "0 fivep_reads"
+
+
+
+comb$passed <- 0
+comb$passed[(comb$axtell_pass==T)+(comb$mirbase_pass==T)+(comb$mirgenedb_pass==T)>=2] <- 1
+comb_passed <- comb[(comb$axtell_pass==T)+(comb$mirbase_pass==T)+(comb$mirgenedb_pass==T)>=2,
+                    c("species","miRNA.ID","mir_seq","pri.miRNA","cluster","fivep_reads","threep_reads","ss","positions","mirgenedb_precision","energy","loop_size","axtell_pass","mirbase_pass","mirgenedb_pass")]
+
+
+
+comb_passed[,c("miRNA.ID","cluster","axtell_pass","mirbase_pass","mirgenedb_pass")]
+
+manual_not_mir <- c("ddis_Cluster_1861(+)","ddis_Cluster_1680(-)",
+                    "ppal_Cluster_3744(-)","ppal_Cluster_2858(-)",
+                    "ppol_Cluster_6245(+)","ppol_Cluster_8717(+)","ppol_Cluster_8730(-)",
+                    "dfir_Cluster_8292(+)","dfir_Cluster_4036(-)",#"dfir_Cluster_7233(+)",
+                    "dfir_new_Cluster_1558(-)","dfir_new_Cluster_3105(+)"#,"dfir_new_Cluster_8308(-)"
+                    )
+comb_passed <- comb_passed[!(comb_passed$cluster%in%manual_not_mir),]
+comb$passed[comb$miRNA.ID%in%manual_not_mir] <- 0
+```
+
+```{r Identify miRNA genomic locations}
+
+#comb_passed <- rbind(comb_passed[,1:51],ddis_existing_analyzed[ddis_existing_analyzed$classify!="not_miRNA",1:51])
+
+for (species in species_list) {
+  fasta <- c()
+  for (i in c(1:nrow(comb_passed[comb_passed$species==species,]))) {
+    fasta <- append(fasta, paste0(">",comb_passed[comb_passed$species==species,"miRNA.ID"][i,]))
+    fasta <- append(fasta, gsub("U","T",comb_passed[comb_passed$species==species,"pri.miRNA"][i,], ignore.case = T))
+  }
+  write(fasta,file = paste0("data_in/",species,"/selected_clusters.fa") )
+}
+
+# genomic_locations <- data.frame()
+# for (species in species_list) {
+#   genomic_locations <- rbind(genomic_locations,
+#   cbind(species, do.call(rbind, strsplit(system(paste0(
+#     "~/*/bin/bowtie -v 0 -a ../references/",species,"/",species,"_comb --threads 6 --quiet -f data_in/",species,"/selected_clusters.fa"
+#   ), intern = T), split = "\t"))))
+# }
+# colnames(genomic_locations) <- c("species", paste0("X",1:7))
+# write.table(genomic_locations,"data_in/genomic_locations_table.tsv",sep = "\t", quote = F)
+genomic_locations <- read.table("data_in/genomic_locations_table.tsv",sep = "\t")
+
+genomic_locations <- genomic_locations[order(match(genomic_locations$species, species_list), genomic_locations$X3),]
+
+for (i in unique(genomic_locations$X1[as.numeric(genomic_locations$X7)>0])) {
+  genomic_locations$X8[genomic_locations$X1==i] <- paste0(i,letters[1:length(which(genomic_locations$X1==i))])
+}
+
+
+comb_passed <- cbind.data.frame(
+  comb_passed[match(genomic_locations$X1,comb_passed$miRNA.ID),],
+  "location" = paste0(genomic_locations$X3,":",as.numeric(genomic_locations$X4)+1,"..", 
+         as.numeric(genomic_locations$X4)+nchar(comb_passed$pri.miRNA[match(genomic_locations$X1,comb_passed$miRNA.ID)])),
+  "chromosome" = genomic_locations$X3,
+  "start_location" = as.numeric(genomic_locations$X4)+1,
+  "end_location" =  as.numeric(genomic_locations$X4)+nchar(genomic_locations$X5),
+  "orientation" = genomic_locations$X2
+  )
+
+clust_vector <- genomic_locations$X8
+clust_vector[is.na(clust_vector)] <- comb_passed$cluster[is.na(clust_vector)]
+
+comb_passed$cluster <- clust_vector
+
+```
+
+
+```{r Name miRNAs}
+
+miRNA_naming_list <- list("ddis" = c(1179,7097,1183,7096,1186,1176,1177), 
+                          "dfir" = c(1192,1191,1190,1195,1196), 
+                          "dfir_new" = c(1189:1193,1177,1194:1196),
+                          "dlac" = 1197:1198,
+                          "ppal" = 1199:1202,
+                          "asub" = c(1203,paste0("1204-P",1:3),1205:1208,
+                                     "1204-P4",1209:1213,paste0("1204-P",5:6),
+                                     1214:1215,paste0("1204-P",7:8),1216:1217),
+                          "dfas" = c(1218,1219,"1220-P1","1220-P2"),
+                          "ppol" = 1221:1227,
+                          "acas" = 1228,
+                          "alen" = c("1228-P1",1229,"1228-P2","1230-P1","1230-P2")
+                          )
+comb_passed$miRNA.ID <- paste0(substr(comb_passed$species,1,3),"-mir-",unlist(miRNA_naming_list)
+)
+comb_passed$miRNA_family <- "None"
+comb_passed$miRNA_family[comb_passed$cluster == "ddis_Cluster_1849(+)"|
+                          comb_passed$cluster == "dfir_new_Cluster_8609(-)"] <- "mir-1177"
+comb_passed$miRNA_family[grep("asub_Cluster_3408",comb_passed$cluster)] <- "mir-1204"
+comb_passed$miRNA_family[comb_passed$cluster == "dfas_Cluster_611(-)"|
+                          comb_passed$cluster == "dfas_Cluster_616(-)"] <- "mir-1220"
+comb_passed$miRNA_family[comb_passed$cluster == "acas_Cluster_5138(+)"|
+                          comb_passed$cluster == "alen_Cluster_2130(+)"|
+                          comb_passed$cluster == "alen_Cluster_556(+)"] <- "mir-1228"
+comb_passed$miRNA_family[comb_passed$cluster == "alen_Cluster_2233(-)"|
+                          comb_passed$cluster == "alen_Cluster_4026(-)"] <- "mir-1230"
+
+
+```
+
+The miRNA sequences of the confirmed candidates are output in fasta files, as well as in a table. The genomic locations of the miRNAs are added and used to generate a gff file to annotated the genomes. 
+
+```{r Ouput fasta files with miRNA sequences, message=FALSE, warning=FALSE}
+
+#comb_passed <- rbind(comb_passed[,1:51],ddis_existing_analyzed[ddis_existing_analyzed$classify!="not_miRNA",1:51])
+
+fasta <- c()
+for (i in c(1:nrow(comb_passed))) {
+  fasta <- append(fasta, paste0(">",comb_passed$miRNA.ID[i]))
+  fasta <- append(fasta, comb_passed$mir_seq[i])
+}
+write(fasta,file = "data_out/miRNAs.fa")
+
+fasta <- c()
+for (i in c(1:nrow(comb_passed))) {
+  fasta <- append(fasta, paste0(">",comb_passed$miRNA.ID[i]))
+  fasta <- append(fasta, comb_passed$pri.miRNA[i])
+}
+write(fasta,file = "data_out/miRNA_hairpins.fa")
+
+fasta <- c()
+for (i in c(1:nrow(comb_passed))) {
+  pos <- sort(as.numeric(unlist(strsplit(comb_passed$positions[i],  split = ","))))
+  fasta <- append(fasta, paste0(">",comb_passed$miRNA.ID[i]))
+  fasta <- append(fasta, 
+      gsub("U","T",paste0(substr(comb_passed$pri.miRNA[i],start=pos[1]+1, stop =pos[2]+1), 
+             paste(rep("N",40-nchar(substr(comb_passed$pri.miRNA[i],start=pos[1]+1, stop =pos[2]+1))),
+                   collapse = ""),
+    substr(comb_passed$pri.miRNA[i],start=pos[3]+1, stop =pos[4]+1))
+      ,ignore.case = T)
+    )
+}
+write(fasta,file = "data_out/miRNAs_withstar.fa")
+
+
+```
+
+
+```{r Output tables with identified miRNAs, message=FALSE, warning=FALSE}
+
+comb_filled <- comb[c(1:52,rep(53,8),54:nrow(comb)),]
+comb_filled$cluster[53:60] <- paste0(comb_filled$cluster[53:60],letters[1:8])
+comb_filled$miRNA.ID[comb_filled$cluster%in%comb_passed$cluster] <- comb_passed$miRNA.ID[na.omit(match(comb_filled$cluster,comb_passed$cluster))]
+
+summ <- comb_filled %>% 
+  group_by(species) %>%
+  summarise(combined=sum(passed==1),
+            axtell_pass=sum(axtell_pass==T),
+            mirbase_pass=sum(mirbase_pass==T),
+            mirgenedb_pass=sum(mirgenedb_pass==T))
+summ
+
+write.table(summ,
+     file = "data_out/miRNA_candidates_table_summarised.tsv",
+     quote = F,
+     sep = "\t", 
+     row.names = F
+)
+
+
+table_out <- comb_filled[(comb_filled$axtell_pass==T)+(comb_filled$mirbase_pass==T)+(comb_filled$mirgenedb_pass==T)>=1,
+     c("species","miRNA.ID","axtell_pass","mirbase_pass","mirgenedb_pass","passed")]
+table_out <- table_out[order(match(table_out$species, species_list)),]
+table_out$passed[table_out$passed==1] <- "passed"
+table_out$passed[table_out$passed==0] <- "failed: only one set of criteria"
+write.table(table_out,
+     file = "data_out/miRNA_candidates_table.tsv",
+     quote = F,
+     sep = "\t", 
+     row.names = F
+)
+
+criteria_list <- list(
+  axtell = comb_filled$miRNA.ID[comb_filled$axtell_pass=="TRUE"],
+  mirbase = comb_filled$miRNA.ID[comb_filled$mirbase_pass=="TRUE"],
+  mirgenedb = comb_filled$miRNA.ID[comb_filled$mirgenedb_pass=="TRUE"]
+)
+tiff("plots/venn_miRcriteria_new.tiff", width = 5, height = 5, units = "in", res = 320)
+venn(criteria_list, zcolor = palette2[c(1,3,7)], ggplot = T, ilcs = 1)
+dev.off()
+venn(criteria_list, zcolor = palette2[c(1,3,7)], ggplot = T, ilcs = 1)
+
+#comb_passed[,c("species","miRNA.ID","axtell_pass","mirbase_pass","mirgenedb_pass","cluster")]
+
+
+```
+
+```{r Add genomic context to miRNAs}
+miR_origins <- matrix(c("acas_Cluster_5138(+)","intergenic",
+                 "ppal_Cluster_3227(-)","intronic_antisense","ppal_Cluster_3786(+)","intergenic","ppal_Cluster_4834(-)","intronic_antisense","ppal_Cluster_6741(-)","intronic_intergenic",
+  "dfas_Cluster_611(-)","intronic_antisense","dfas_Cluster_616(-)","intergenic","dfas_Cluster_1172(+)","exonic_antisense","dfas_Cluster_893(+)","exonic_antisense",
+  "dlac_Cluster_2307(-)","intergenic","dlac_Cluster_2463(+)","intergenic",
+  "asub_Cluster_2821(-)","intergenic","asub_Cluster_3219(+)","intergenic","asub_Cluster_3317(-)","intergenic","asub_Cluster_3339(-)","intergenic","asub_Cluster_3403(+)","intergenic","asub_Cluster_3408(-)a","intergenic","asub_Cluster_3408(-)b","intergenic","asub_Cluster_3408(-)c","3'antisense","asub_Cluster_3408(-)d","intergenic","asub_Cluster_3408(-)e","3'antisense","asub_Cluster_3408(-)f","3'antisense","asub_Cluster_3408(-)g","3'antisense","asub_Cluster_3408(-)h","3'antisense","asub_Cluster_3454(-)","intergenic","asub_Cluster_3463(-)","intergenic","asub_Cluster_3545(-)","intergenic","asub_Cluster_3588(+)","exonic_5'sense","asub_Cluster_3681(-)","intergenic","asub_Cluster_3993(+)","intergenic","asub_Cluster_4040(-)","intergenic","asub_Cluster_4414(-)","intergenic","asub_Cluster_4427(+)","intergenic",
+  "ddis_Cluster_961(-)","intergenic","ddis_Cluster_1453(-)","intergenic","ddis_Cluster_1601(-)","intergenic","ddis_Cluster_1628(-)","intergenic","ddis_Cluster_1651(+)","intergenic","ddis_Cluster_1831(+)","intergenic","ddis_Cluster_1849(+)","intergenic"), 
+  ncol = 2, byrow = T)
+comb_passed$origin <- "genome_not_annotated"
+comb_passed$origin[match(miR_origins[,1],comb_passed$cluster)] <- miR_origins[,2]
+
+
+```
+
+
+```{r Output gff file containing all miRNA annotations, message=FALSE, warning=FALSE}
+
+#comb_passed[comb_passed$species=="ppol",c("miRNA.ID","mir_seq","axtelltotal","mirbase_high","axtell_high","copies")]
+
+gff_prep <- c()
+for (i in 1:nrow(comb_passed)) {
+  if (nchar(comb_passed$positions[i])>20) {
+    gff_prep <- rbind(gff_prep, as.numeric(unlist(strsplit(comb_passed$positions[i], ",")))[-c(3:6)])
+  } else {
+    gff_prep <- rbind(gff_prep, as.numeric(unlist(strsplit(comb_passed$positions[i], ","))))
+  }
+}
+
+colnames(gff_prep) <- c("pos1","pos2","pos3","pos4")
+
+gff <- NULL
+for (n in c(1:nrow(gff_prep))) {
+  chromosome <- comb_passed$chromosome[n]
+  x2 <- "."
+  type <- "miRNA_primary_transcript"
+  start <- comb_passed$start_location[n]
+  end <- comb_passed$start_location[n]+nchar(comb_passed$pri.miRNA[n])-1
+  x6 <- "."
+  direction <- comb_passed$orientation[n]
+  x8 <- "."
+  id <- paste0("Name=",comb_passed$miRNA.ID[n])
+  gff <- rbind(gff, data.frame(chromosome, x2, type, start, end, x6 , direction, x8, id))
+  
+  mir_positions_vector <- if (direction == "-") {
+                              end - gff_prep[n,c(2,1,4,3)]
+                          } else {
+                              start + gff_prep[n,]
+                          }
+  type <- "miRNA-5p"
+  start <- mir_positions_vector[1]
+  end <- mir_positions_vector[2]
+  id <- paste0("Name=",comb_passed$miRNA.ID[n],"-5p")
+  gff <- rbind(gff, data.frame(chromosome, x2, type, start, end, x6 , direction, x8, id))
+  
+  type <- "miRNA-3p"
+  start <- mir_positions_vector[3]
+  end <- mir_positions_vector[4]
+  id <- paste0("Name=",comb_passed$miRNA.ID[n],"-3p")
+  gff <- rbind(gff, data.frame(chromosome, x2, type, start, end, x6 , direction, x8, id))
+  
+}
+write.table(x = gff, file = "data_out/combined_miRNA_annotations.gff", sep = "\t", row.names = F, quote = F, col.names = F)
+
+# pri_mir_bed_prep <- cbind.data.frame(comb_passed$species, comb_passed$chromosome, comb_passed$start_location-1,  comb_passed$end_location,comb_passed$miRNA.ID, round(comb_passed$mirgenedb_precision*1000,0), comb_passed$orientation)
+# for (species in species_list) {
+#   pri_mir_bed <- pri_mir_bed_prep[pri_mir_bed_prep[,1]==species,-1]
+#   write.table(x = pri_mir_bed, file = paste0("../references/", species,"/primir.bed"), sep = "\t", row.names = F, col.names = F, quote = F)
+# }
+
+
+SAF <- comb_passed[,c("miRNA.ID","chromosome","start_location","end_location","orientation","species")]
+colnames(SAF) <- c("GeneID","Chr","Start","End","Strand","Species")
+SAF$Classify <- "miRNA"
+rownames(SAF) <- c(1:nrow(SAF))
+
+
+
+```
+
+Following identification of the miRNAs, the characteristics of the miRNAs are analyzed. For those characteristics where it is relevant, the comparison is made with Plants and Animals. Plant and Animal miRNA sequences were accesses from PmiREN 2.0 and MirGeneDB 2.1 respectively. 
+
+```{r Nucleotide logo miRNAs, fig.height=3, fig.width=10, message=FALSE, warning=FALSE}
+metazoa <- read.delim("data_in/outgroup_mir/metazoa_mirgenedb.fas", header = F)
+metazoamir <- data.frame("name"=metazoa[c(TRUE,FALSE),], "seq"=metazoa[c(FALSE,TRUE),])
+metazoa <- read.delim("data_in/outgroup_mir/metazoa_premir_mirgenedb.fas", header = F)
+metazoapremir <- data.frame("name"=metazoa[c(TRUE,FALSE),], "seq"=metazoa[c(FALSE,TRUE),])
+plants <- read.delim("data_in/outgroup_mir/plants_pmiren.fas", header = F)
+plantsmir <- data.frame("name"=plants[c(TRUE,FALSE),], "seq"=plants[c(FALSE,TRUE),])
+plants <- read.delim("data_in/outgroup_mir/plant_premir_pmiren.fas", header = F)
+plantspremir <- data.frame("name"=plants[c(TRUE,FALSE),], "seq"=plants[c(FALSE,TRUE),])
+
+seqs_comb <- list("Amoebozoae"=gsub("T","U",toupper(substr(comb_passed$mir_seq[comb_passed$species!="dfir"],1,20))),
+                  #"H. sapiens"=substr(hsamir$seq,1,20),
+                  #"C. elegans"=substr(celmir$seq,1,20),
+                  #"A. thaliana"=substr(athmir$seq,1,20),
+                  #"C. reinhardtii"=substr(cremir$seq,1,20),
+                  "Animals"=substr(metazoamir$seq,1,20),
+                  "Plants"=gsub("T","U",substr(plantsmir$seq[nchar(plantsmir$seq)>19],1,20)))
+
+a <- ggseqlogo(seqs_comb, method = "bits")+theme(axis.text.x.bottom = element_text(size = rel(0.5)))
+a
+ggsave(filename = "plots/seq_logo_bits.tiff", plot = a, device = "tiff", units = "cm" ,width = 15, height = 4, dpi = 200)
+
+
+
+```
+
+
+```{r sRNA annotations,  fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
+acas_LP_mir <- cbind(read.delim("data_in/acas/length_profile_after_miR_identification.txt", sep = " ", row.names = NULL, header = F),V4 = "acas")
+alen_LP_mir <- cbind(read.delim("data_in/alen/length_profile_after_miR_identification.txt", sep = " ", row.names = NULL, header = F),V4 = "alen")
+asub_LP_mir <- cbind(read.delim("data_in/asub/length_profile_after_miR_identification.txt", sep = " ", row.names = NULL, header = F),V4 = "asub")
+dfas_LP_mir <- cbind(read.delim("data_in/dfas/length_profile_after_miR_identification.txt", sep = " ", row.names = NULL, header = F),V4 = "dfas")
+ddis_LP_mir <- cbind(read.delim("data_in/ddis/length_profile_after_miR_identification.txt", sep = " ", row.names = NULL, header = F),V4 = "ddis")
+dlac_LP_mir <- cbind(read.delim("data_in/dlac/length_profile_after_miR_identification.txt", sep = " ", row.names = NULL, header = F),V4 = "dlac")
+dfir_LP_mir <- cbind(read.delim("data_in/dfir/length_profile_after_miR_identification.txt", sep = " ", row.names = NULL, header = F),V4 = "dfir")
+dfir_new_LP_mir <- cbind(read.delim("data_in/dfir_new/length_profile_after_miR_identification.txt", sep = " ", row.names = NULL, header = F),V4 = "dfir_new")
+ppal_LP_mir <- cbind(read.delim("data_in/ppal/length_profile_after_miR_identification.txt", sep = " ", row.names = NULL, header = F),V4 = "ppal")
+ppol_LP_mir <- cbind(read.delim("data_in/ppol/length_profile_after_miR_identification.txt", sep = " ", row.names = NULL, header = F),V4 = "ppol")
+
+all_LP_mir <- rbind(acas_LP_mir,alen_LP_mir,asub_LP_mir,dfas_LP_mir,ddis_LP_mir,dlac_LP_mir,dfir_LP_mir,dfir_new_LP_mir,ppal_LP_mir,ppol_LP_mir)
+colnames(all_LP_mir) <- c("reads","readlength","rna_type","species")
+#all_LP_mir$V2 <- as.numeric(substr(all_LP_mir$V2,1,2))
+all_LP_mir$species <- factor(all_LP_mir$species, levels = c("ddis","dfir","dfir_new","dlac","ppal","asub","dfas","ppol","acas","alen"))
+all_LP_mir$rna_type[all_LP_mir$rna_type=="TEmerged"|
+                      all_LP_mir$rna_type=="complementary_TEmerged"] <- "transposon"
+all_LP_mir$rna_type[all_LP_mir$rna_type=="primir"] <- "miRNA"
+all_LP_mir$rna_type[all_LP_mir$rna_type=="complementary_rRNA"|
+            all_LP_mir$rna_type=="complementary_snRNA"|
+            all_LP_mir$rna_type=="complementary_tRNA"|
+            all_LP_mir$rna_type=="complementary_ncRNA"] <- "intergenicRNA"
+all_LP_mir$rna_type[all_LP_mir$rna_type=="ncRNA"] <- "other_ncRNA"
+all_LP_mir <- all_LP_mir %>% group_by(readlength, rna_type, species) %>% summarise(reads = sum(reads))
+all_LP_mir$rna_type <- factor(all_LP_mir$rna_type, levels = c("miRNA","intergenicRNA","transposon","tRNA","snRNA","mRNA","complementary_mRNA","rRNA","other_ncRNA"))
+grouped_all_LP_mir <- all_LP_mir %>% group_by(rna_type ,species ) %>% summarise(reads = sum(reads))
+all_LP_mir$reads <- all_LP_mir$reads/1E6
+
+
+LP_mir_sizesel <- all_LP_mir[all_LP_mir$readlength>=20 & all_LP_mir$readlength<=24, ] 
+LP_mir_sizesel$rna_type[LP_mir_sizesel$rna_type=="complementary_mRNA"]<-"intergenicRNA"
+LP_mir_sizesel %>% group_by(rna_type, species) %>%
+  summarise(sum(reads)) -> LP_mir_sizesel
+
+plotdat <- LP_mir_sizesel[
+  #LP_mir_sizesel$rna_type!="snRNA"&LP_mir_sizesel$rna_type!="tRNA"&LP_mir_sizesel$rna_type!="other_ncRNA"&
+  LP_mir_sizesel$rna_type!="rRNA"&LP_mir_sizesel$rna_type!="mRNA"&
+  LP_mir_sizesel$species!="dfir_new",]
+plotdat$species <- factor(plotdat$species, levels = rev(species_list))
+a <- ggplot(plotdat, aes(x=species,y=plotdat$`sum(reads)`, fill = rna_type))+
+  geom_bar(stat = "identity", position  = "fill", color="#222222")+
+  coord_flip()+
+  theme(legend.position = "right", 
+        panel.background = element_blank(), 
+        axis.text.y = element_text(color="black",size=14, face = "italic"),
+        axis.text.x = element_text(size = 12),
+        legend.text = element_text(size = 12),
+        axis.title.x = element_text(size = 12))+
+  scale_fill_manual(values = palette3 , guide = guide_legend(reverse = FALSE), name = "RNA type:")+
+  scale_x_discrete(labels = labels, name = element_blank())+
+  scale_y_continuous(name = "Fraction of 20-24nt ncRNA reads")
+a
+ggsave("plots/miRNA_expression.tiff", a, device = "tiff", dpi = 200, scale = 2, width = 3, height = 2.5)
+```
+
+
+```{r Length profiles with annotations,  fig.height=8, fig.width=10, message=FALSE, warning=FALSE}
+b <- ggplot(all_LP_mir[all_LP_mir$rna_type!="other_ncRNA"&all_LP_mir$rna_type!="snRNA"&all_LP_mir$rna_type!="rRNA"&all_LP_mir$species!="dfir",],
+  aes(readlength,reads, fill = rna_type))+ 
+  facet_wrap(~species, scales = "free", ncol = 3, labeller = labeller(species = labels))+
+  geom_bar(stat = "identity", color="#333333", size = 0.6, width = 0.8)+
+  labs(y = "million mapped reads", x="read length",fill="RNA type")+
+    scale_fill_manual(values  = palette2[c(1,7,6,4,3,2)])+
+    theme(legend.key.size = unit(0.5, 'cm'),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        panel.background = element_rect(fill = "#EEEEEE"),
+        panel.grid = element_line(colour = "grey90"),
+        strip.background = element_rect(fill= "#E3E3E3"),
+        strip.text = element_text(face= "italic", size = 12),
+        legend.position = "top")
+b
+ggsave("plots/lengthprofile_with_miR.tiff", b, device = "tiff", dpi = 200, scale = 2, width = 5, height = 4)
+
+c <- ggplot(all_LP_mir[all_LP_mir$rna_type=="miRNA"&all_LP_mir$species!="dfir",],
+  aes(readlength,reads, fill = rna_type))+ 
+  facet_wrap(~species, scales = "free", ncol = 3, labeller = labeller(species = labels))+
+  geom_bar(stat = "identity", color="#333333", size = 0.6, width = 0.8)+
+  labs(y = "million mapped reads", x="read length",fill="RNA type")+
+    scale_fill_manual(values  = palette2[c(1,7,6,4,3,2)])+
+    coord_cartesian(xlim = c(17.9,26.1))+
+    theme(legend.key.size = unit(0.5, 'cm'),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10),
+        panel.background = element_rect(fill = "#EEEEEE"),
+        panel.grid = element_line(colour = "grey90"),
+        strip.background = element_rect(fill= "#E3E3E3"),
+        strip.text = element_text(face= "italic", size = 12))
+c
+ggsave("plots/miRNA_lengthprofile.tiff",c, device = "tiff", dpi = 200, scale = 2, width = 6, height = 3.75)
+```
+
+
+```{r Plot of miRNA origins, fig.height=4, fig.width=8}
+plotdat <-  comb_passed
+plotdat$origin[is.na(plotdat$origin)] <- "not_annotated"
+plotdat$origin[grep("intronic_intergenic", plotdat$origin)] <- "intronic_sense"
+plotdat$origin[grep("exonic", plotdat$origin)] <- "exonic_antisense"
+plotdat$origin[grep("3'", plotdat$origin)] <- "exonic_antisense"
+plotdat$origin[grep("intergenic", plotdat$origin)] <- "intergenic"
+plotdat$origin <- factor(plotdat$origin, levels = c("intergenic","intronic_sense","intronic_antisense","exonic_antisense","genome_not_annotated"), labels = c("intergenic","intronic sense","intronic antisense","exonic antisense","genome not annotated"))
+plotdat$species <- factor(plotdat$species, levels = rev(species_list))
+
+d <- ggplot(plotdat[plotdat$species!="dfir",], aes(species, fill = origin))+
+  geom_bar(color = "black")+
+  coord_flip()+
+  labs(y = "miRNA count", x = "", fill = "Genomic origin")+
+  scale_fill_manual(values =  c(palette2[c(1,3,6,7)],"white"))+
+  scale_x_discrete(labels = labels)+
+ theme(axis.text.y = element_text( size = 12, colour = "black", face = "italic"),
+    axis.text.x = element_text( size = 10, colour = "black"),
+    axis.title = element_text(size = 12),
+    legend.text = element_text(size = 10),
+    panel.background = element_rect(fill = NA),
+    panel.grid = element_line(colour = "grey90"), panel.border = element_rect(size = 1, fill = NA),legend.key=element_blank(),
+    legend.position = "right")
+d
+ggsave("plots/miRNA_origin.tiff", d, device = "tiff", dpi = 200, width = 6, height = 3)
+
+ # plotdat$miRNA_family[plotdat$miRNA_family=="mir-1177"] <- "None"
+```
+
+
+```{r Plots of miRNA characteristics,  fig.width=8, fig.height=5}
+e <- ggplot(plotdat[plotdat$species!="dfir",], aes(species,y = nchar(pri.miRNA)-18, fill = miRNA_family))+
+  geom_beeswarm(shape=21, cex = 1.2, size = 1.5 , method = "center", priority = "random")+
+  coord_flip()+
+  labs(y = "pre-miRNA length (nt)", x = "", fill = "miRNA-family")+
+  scale_fill_manual(values =  c(palette2[c(1,3,4,6,7)],"white"))+
+  scale_x_discrete(labels = labels)+
+  theme(axis.text.y = element_text( size = 12, colour = "black", face = "italic"),
+    axis.text.x = element_text( size = 12, colour = "black"),
+    axis.title = element_text(size = 12),
+    legend.text = element_text(size = 12),
+    panel.background = element_rect(fill = NA),
+    panel.grid = element_line(colour = "grey90"), panel.border = element_rect(size = 1, fill = NA),legend.key=element_blank() )
+
+e
+ggsave("plots/loopsize.tiff",e, device = "tiff", dpi = 200, width = 5.5, height = 3)
+
+ 
+plotdat <- rbind(
+  cbind.data.frame("species"="Animals","pre_miRNA_length"=nchar(metazoapremir$seq)),
+  cbind.data.frame("species"="Plants","pre_miRNA_length"=nchar(plantspremir$seq)),
+  cbind.data.frame("species"="Amoebozoa","pre_miRNA_length"=nchar(comb_passed$pri.miRNA[comb_passed$species!="dfir"])-18)
+)
+plotdat$species <- factor(plotdat$species, levels = c("Animals","Amoebozoa","Plants"))
+
+f <- ggplot(plotdat, aes(x = pre_miRNA_length, y = factor(species), fill = species))+
+  geom_violin(scale="width", adjust = 1.5)+
+  #geom_beeswarm(cex = 0.1, size = 0.1)+
+  scale_fill_manual(values = palette2[c(6,3,1)], breaks = c("Plants","Amoebozoa","Animals"))+
+  #coord_flip()+
+  scale_x_continuous(breaks = c(50,100,150,200,250))+
+  labs(x = "pre-miRNA length (nt)", y = "", fill = "Supergroup")+
+  theme(axis.text = element_text(size = 12, colour = "black"),
+        axis.title = element_text(size = 12),
+        panel.background = element_rect(fill = NA),
+        panel.grid = element_line(colour = "grey90"),
+        legend.key=element_blank(),
+        panel.border = element_rect(size = 1, fill = NA))
+
+
+f
+ggsave("plots/loopsize_plants_animals.tiff",f, device = "tiff", dpi = 200, width = 5.5, height = 3.6)
+
+```
+
+```{r AT of miRNAs and intergenic regions, fig.width=6, fig.height=4}
+ATrich_miRNA <- data.frame(read.csv("data_in/ATn_rich_intergenic_miRNA.csv"))
+ATrich_miRNA$percentageAT <- (ATrich_miRNA$A+ATrich_miRNA$T)/(ATrich_miRNA$total - ATrich_miRNA$N)*100
+ATrich_miRNA$species <- factor(ATrich_miRNA$species, levels = rev(species_list))
+
+plotdat <- cbind.data.frame(
+  species = comb_passed$species,
+  miRNA.ID = comb_passed$miRNA.ID, 
+  miRNA_family = comb_passed$miRNA_family,
+  percentageAT =lengths(regmatches(comb_passed$mir_seq, gregexpr("u|a",comb_passed$mir_seq,ignore.case = T)))/nchar(comb_passed$mir_seq)*100,
+  type = "miRNA"
+  )
+plotdat <- rbind(plotdat,
+                 cbind.data.frame(
+  species = ATrich_miRNA$species[ATrich_miRNA$type=="intergenic"&ATrich_miRNA$species!="dfir_new"&ATrich_miRNA$species!="alen"&ATrich_miRNA$species!="ppol"],
+  miRNA.ID = "None",
+  miRNA_family = "None",
+  percentageAT = ATrich_miRNA$percentageAT[ATrich_miRNA$type=="intergenic"&ATrich_miRNA$species!="dfir_new"&ATrich_miRNA$species!="alen"&ATrich_miRNA$species!="ppol"],
+  type = "intergenic"
+                 )
+                 )
+
+plotdat <- plotdat[plotdat$species!="dfir",]
+
+c <- ggplot(plotdat) +
+  geom_beeswarm(aes(species,y = percentageAT, fill = miRNA_family, shape = type), cex = 1.2, size = 1.5, method = "center" )+
+  scale_shape_manual(values = c(15,21))+
+  scale_fill_manual(values = c(palette2[c(1,3,4,6,7)],"white"))+
+  scale_x_discrete(labels = labels)+
+  coord_flip()+
+  labs(y = "A+T %", x = "")+
+  theme(axis.text.y = element_text( size = 12, colour = "black", face = "italic"),
+    axis.text.x = element_text( size = 12, colour = "black"),
+    axis.title = element_text(size = 12),
+    legend.text = element_text(size = 12),
+    panel.background = element_rect(fill = NA),
+    panel.grid = element_line(colour = "grey90"), panel.border = element_rect(size = 1, fill = NA),legend.key=element_blank() )
+ggsave("plots/swarm_AT_intergenic.tiff", c, device = tiff, dpi = 200, width = 5.5, height = 3)
+
+mean_miRNA_AT <- plotdat %>% group_by(species) %>% filter(type == "miRNA") %>%  summarise(percentageAT = mean(percentageAT))
+mean_miRNA_AT$type <- "miRNA"
+plotdat <- rbind(mean_miRNA_AT, ATrich_miRNA[ATrich_miRNA$type=="intergenic",c("species","percentageAT","type")])
+plotdat$species <- factor(plotdat$species,levels = species_list)
+
+ b <- ggplot(plotdat[plotdat$species%in%c("ddis","dlac","ppal","asub","dfas","acas"),], 
+             aes(percentageAT, species, shape = type))+
+  geom_beeswarm(method = "center", cex = 2, size = 2)+
+  scale_shape_manual(values = c(15,21))+
+  scale_fill_manual(values = c(palette2[c(1,3,4,6,7)],"white"))+
+  scale_y_discrete(labels = labels)+
+  #scale_x_continuous(breaks = c(40,50,60,70,80,90),limits = c(40,90))+
+  labs(x = "Mean A+T content %", fill ="DNA-type", shape = "DNA-type", y = "")+
+  theme(axis.text.y = element_text( face = "italic"),
+        axis.text.x = element_text( size = 12, colour = "black"),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 12),
+      panel.background = element_rect(fill = NA),
+      panel.grid = element_line(colour = "grey90"), panel.border = element_rect(size = 1, fill = NA),legend.key=element_blank() )
+b
+ggsave("plots/AT_miRNA.tiff", b, device = tiff, dpi = 200, width = 5, height = 3)
+
+
+plotdat <- ATrich_miRNA[ATrich_miRNA$species%in%c("ddis","dlac","ppal","asub","dfas","acas"),]
+plotdat$type[plotdat$type=="miRNA"] <- "miRNA hairpin"
+ a <- ggplot(plotdat[plotdat$type!="ORF",], aes(percentageAT, species, shape = type))+
+  geom_beeswarm(method = "center", cex = 1, size = 1.5)+
+  scale_shape_manual(values = c(15,21))+
+  scale_fill_manual(values = c(palette2[c(1,3,4,6,7)],"white"))+
+  scale_y_discrete(labels = labels)+
+  #scale_x_continuous(breaks = c(40,50,60,70,80,90),limits = c(40,90))+
+  labs(x = "Mean A+T content %", fill ="DNA-type", shape = "DNA-type", y = "")+
+  theme(axis.text.y = element_text( face = "italic"),        
+      panel.background = element_rect(fill = NA),
+      panel.grid = element_line(colour = "grey90"), panel.border = element_rect(size = 1, fill = NA),legend.key=element_blank() )
+a
+ggsave("plots/AT_miRNA_hairpin.tiff", a, device = tiff, dpi = 200, width = 5, height = 3)
+```
+
+
+
+```{r Output table with miRNA characteristics}
+# miRPM <- data.frame()
+# for (species in species_list) {
+#   fcounts1 <- featureCounts(files = paste0("../shstack_out_fraction/",species,"/",species,"1.bam"), annot.ext = SAF[SAF$Species==species,])
+#   fcounts2 <- featureCounts(files = paste0("../shstack_out_fraction/",species,"/",species,"2.bam"), annot.ext = SAF[SAF$Species==species,])
+#   fcounts3 <- featureCounts(files = paste0("../shstack_out_fraction/",species,"/",species,"3.bam"), annot.ext = SAF[SAF$Species==species,])
+#   RPMs <- cbind(fcounts1$annotation[,1],
+#                 rowMeans(cbind(fcounts1$counts/(fcounts1$stat[1,2]+fcounts1$stat[2,2]),
+#                                fcounts2$counts/(fcounts2$stat[1,2]+fcounts2$stat[2,2]),
+#                                fcounts3$counts/(fcounts3$stat[1,2]+fcounts3$stat[2,2])))*1e6,
+#                 species)
+#   miRPM <- rbind(miRPM,RPMs)
+# }
+# colnames(miRPM) <- c("miRNA.ID","rpm","species")
+# write.table(miRPM, file = "data_in/miRNA_expression_levels.tsv", sep = "\t", row.names = F, quote = F)
+miRPM <- read.table("data_in/miRNA_expression_levels.tsv", sep = "\t", header = T)
+
+miRPM$species <- factor(miRPM$species, levels = rev(species_list))
+
+
+miRNA_characteristics <- comb_passed[,c("miRNA.ID","mir_seq","fivep_reads","threep_reads","mirgenedb_precision","origin","location","miRNA_family","energy")]
+miRNA_characteristics$pre_miRNA_size <- nchar(comb_passed$pri.miRNA)-18
+miRNA_characteristics$fivep_reads <- miRNA_characteristics$fivep_reads+miRNA_characteristics$threep_reads
+miRNA_characteristics$threep_reads <- miRPM$rpm
+colnames(miRNA_characteristics) <- c("miRNA.ID","miRNA_sequence","miRNA_counts","miRNA_RPM","precision","genomic_context","genomic_location","miRNA_family","folding energy (kcal/mol)","pre-miRNA size (nt)")
+
+
+miRNA_characteristics$miRNA_RPM <- round(miRNA_characteristics$miRNA_RPM, digits = 0)
+
+miRNA_characteristics$precision <- round(miRNA_characteristics$precision, 3)*100
+
+write.table(
+     miRNA_characteristics,
+     file = "data_out/miRNA_characteristics.tsv",
+     quote = F,
+     sep = "\t", 
+     row.names = F
+)
+
+```
+
+Using Satsuma2, the synteny blocks between D. firmibasis an D. discoideum were identified, with the results summarised in data_in/satsuma_synteny.out. Here, the synteny blocks are linked together if they are within 5000nt of eachother. The first circos plot shows all the synteny that was identified between the two genomes; the second plot shows only those synteny blocks that contain a miRNA on either genome, with the label identifying which miRNA is on the region. 
+
+```{r Satsuma synteny blocks miRNAs, fig.height=9.2, fig.width=9.6, message=FALSE, warning=FALSE}
+dfir_sats_in <- read.table("data_in/satsuma_synteny.out", sep = "\t", header = F)
+dfir_sats_in <- dfir_sats_in[with(dfir_sats_in, order(V1,V2)),]
+
+
+overlap <- 5000 #max distance between two synteny hits to merge them
+rslice <- as.character(dfir_sats_in[1,])
+newdf <- data.frame()
+for (i in 1:nrow(dfir_sats_in)-1) {
+  if (all(rslice[c(1,4,8)]==dfir_sats_in[i+1,c(1,4,8)])) {
+    if (all(rslice[8]=="-", #the next hit is also reverse and within range
+        as.numeric(rslice[5])-overlap<dfir_sats_in[i+1,6],
+        as.numeric(rslice[3])+overlap>dfir_sats_in[i+1,2])) {
+      rslice[3] <- max(as.numeric(rslice[3]),dfir_sats_in[i+1,3]) #add the data from the next hit
+      rslice[5] <- min(as.numeric(rslice[5]),dfir_sats_in[i+1,5])
+    } else if (all(rslice[8]=="+", #the next hit is also in the same direction and within range
+                   as.numeric(rslice[6])+overlap>dfir_sats_in[i+1,5],
+                   as.numeric(rslice[3])+overlap>dfir_sats_in[i+1,2])) {
+      rslice[3] <- max(as.numeric(rslice[3]),dfir_sats_in[i+1,3]) #add the data from the next hit
+      rslice[6] <- max(as.numeric(rslice[6]),dfir_sats_in[i+1,6])
+    } else { #the next hit is not within range
+      newdf <- rbind(newdf,rslice)
+      rslice <- as.character(dfir_sats_in[i+1,])
+    }
+    
+  } else { #the next hit is different (chromosome, direction)
+    newdf <- rbind(newdf,rslice)
+    rslice <- as.character(dfir_sats_in[i+1,])
+  }
+}
+newdf <- rbind(newdf,rslice) #add final row
+
+newdf[,1] <-substr(newdf[,1],1,11)
+
+firmibasis <- data.frame(name = factor(c("Dfi-chr1","Dfi-chr2","Dfi-chr3","Dfi-chr4","Dfi-chr5","Dfi-chr6"),
+                                       levels = c("Dfi-chr1","Dfi-chr2","Dfi-chr3","Dfi-chr4","Dfi-chr5","Dfi-chr6")),
+                         start = rep(0,6),
+												 end = c(9349550,5044425,4909956,4363476,4249557,2965668))
+discoideum <- data.frame(name = factor(c("Ddi-chr1","Ddi-chr2","Ddi-chr3","Ddi-chr4","Ddi-chr5","Ddi-chr6"),
+                                       levels = c("Ddi-chr1","Ddi-chr2","Ddi-chr3","Ddi-chr4","Ddi-chr5","Ddi-chr6")),
+                         start = rep(0,6),
+												 end = c(4923596,8484197,6357299,5450249,5125352,3602379))
+links_df <- newdf
+links_df[,2] <- as.numeric(links_df[,2])
+links_df[,3] <- as.numeric(links_df[,3])
+links_df[,5] <- as.numeric(links_df[,5])
+links_df[,6] <- as.numeric(links_df[,6])
+
+links_df[,1] <- case_when(
+  links_df[,1] == "NC_007087.3" ~ "Ddi-chr1",
+  links_df[,1] == "NC_007088.5" ~ "Ddi-chr2",
+  links_df[,1] == "NC_007089.4" ~ "Ddi-chr3",
+  links_df[,1] == "NC_007090.3" ~ "Ddi-chr4",
+  links_df[,1] == "NC_007091.3" ~ "Ddi-chr5",
+  links_df[,1] == "NC_007092.3" ~ "Ddi-chr6",
+)
+links_df[,4] <- case_when(
+  links_df[,4] == "contig_31" ~ "Dfi-chr1",
+  links_df[,4] == "contig_57" ~ "Dfi-chr2",
+  links_df[,4] == "contig_25" ~ "Dfi-chr3",
+  links_df[,4] == "contig_29" ~ "Dfi-chr4",
+  links_df[,4] == "contig_24" ~ "Dfi-chr5",
+  links_df[,4] == "contig_32" ~ "Dfi-chr6",
+)
+
+combined <- rbind(firmibasis,discoideum)
+links_df <- links_df[links_df[,1]%in%combined$name&links_df[,4]%in%combined$name,]
+
+#tiff("plots/discoideum_firmibasis_circos.png",width = 3600, height = 3450 , res = 420)
+circos.par(start.degree = 90)
+circos.genomicInitialize(combined)
+circos.track(ylim = c(0, 1), 
+             bg.col = c(rep("white",6),brewer.pal(6,"Dark2"),rep("#808080",6)), 
+             bg.border = "#000000", bg.lwd = 2, track.height = 0.05)
+for (i in 1:6) {
+  circos.genomicLink(links_df[links_df[,1]==discoideum$name[i],1:3],
+                     links_df[links_df[,1]==discoideum$name[i],4:6],
+                     col = paste0(brewer.pal(6, "Dark2")[i],"40"))
+}
+dev.off()
+
+circos.clear()
+
+mir_annotations <- comb_passed[comb_passed$species=="dfir_new"|comb_passed$species=="ddis",
+                               c("chromosome","cluster","start_location","end_location","miRNA.ID")]
+mir_annotations[,1] <- case_when(
+  mir_annotations[,1] == "NC_007087.3" ~ "Ddi-chr1",
+  mir_annotations[,1] == "NC_007088.5" ~ "Ddi-chr2",
+  mir_annotations[,1] == "NC_007089.4" ~ "Ddi-chr3",
+  mir_annotations[,1] == "NC_007090.3" ~ "Ddi-chr4",
+  mir_annotations[,1] == "NC_007091.3" ~ "Ddi-chr5",
+  mir_annotations[,1] == "NC_007092.3" ~ "Ddi-chr6",
+  mir_annotations[,1] == "D_firmibasis_chromosome_1" ~ "Dfi-chr1",
+  mir_annotations[,1] == "D_firmibasis_chromosome_2" ~ "Dfi-chr2",
+  mir_annotations[,1] == "D_firmibasis_chromosome_3" ~ "Dfi-chr3",
+  mir_annotations[,1] == "D_firmibasis_chromosome_4" ~ "Dfi-chr4",
+  mir_annotations[,1] == "D_firmibasis_chromosome_5" ~ "Dfi-chr5",
+  mir_annotations[,1] == "D_firmibasis_chromosome_6" ~ "Dfi-chr6",  
+)
+
+
+colnames(mir_annotations) <- c("contig","annotation_ID","start","stop","name")
+mir_annotations %>% mutate(start = as.numeric(start), stop = as.numeric(stop)) -> mir_annotations
+
+colnames(links_df) <- c("ddis_contig","ddis_start","ddis_end","dfir_contig","dfir_start","dfir_end","score","orientation")
+
+
+miR_links_df <- data.frame()
+for (i in 1:nrow(mir_annotations)) {
+  matching <- links_df[,1]==mir_annotations[i,1]&links_df[,2]<=mir_annotations[i,3]&links_df[,3]>=mir_annotations[i,4]|
+           links_df[,4]==mir_annotations[i,1]&links_df[,5]<=mir_annotations[i,3]&links_df[,6]>=mir_annotations[i,4]
+  miR_links_df <- rbind(miR_links_df,
+  cbind(links_df[matching,],name = rep(mir_annotations[i,5],sum(matching))))
+}
+#tiff("plots/mirnas_discoideum_firmibasis_circos.tif",width = 14400, height = 13800 , res = 1680)
+tiff("plots/mirnas_discoideum_firmibasis_circos.tif",width = 1600, height = 1550 , res = 200)
+bed <- mir_annotations[mir_annotations$name %in% miR_links_df$name,c(1,3,4,5)]
+colnames(bed) <- c("chr","start","end","value1")
+circos.par(start.degree = 90, canvas.xlim= c(-1.5,1.5), canvas.ylim = c(-1.5,1.5))
+circos.genomicInitialize(combined, plotType = NULL)
+circos.genomicLabels(bed, labels.column = 4, side = "outside", cex = 0.6)
+circos.track(ylim = c(0, 1), panel.fun = function(x ,y) {
+  circos.text(CELL_META$xcenter, CELL_META$ycenter, CELL_META$sector.index, cex = 0.6, niceFacing = TRUE)
+  circos.genomicAxis(h = "top", direction = "outside")
+},
+             bg.border = "#000000", bg.lwd = 2, track.height = 0.07, 
+             bg.col = c(rep("#FF000040",6),rep("#0000FF40",6)))
+circos.genomicLink(miR_links_df[,1:3],
+                     miR_links_df[,4:6],
+                     col = "#000000BB")
+
+#highlight.sector(combined$name[1:6], track.index = 2, col = "#FF000040")
+#highlight.chromosome(combined$name[7:12], track.index = 2, col = "#0000FF40")
+
+dev.off()
+
+circos.clear()
+```
+
+
