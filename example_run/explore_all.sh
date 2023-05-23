@@ -1,0 +1,1 @@
+python ../miRNA_curation.py -f pot-miRNAs_merged.fa -i example_sizeselected_data/* -o output_example_run/explore/ -id ddis -m explore -e 27

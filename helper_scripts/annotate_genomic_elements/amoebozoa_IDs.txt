@@ -1,0 +1,78 @@
+Chlamys-1_pPol	Naiad/Chlamys	Physarum polycephalum
+Copia-1_ACA-I	Copia	Acanthamoeba castellanii
+Copia-1_ACA-LTR	Copia	Acanthamoeba castellanii
+Copia-2_ACA-I	Copia	Acanthamoeba castellanii
+Copia-2_ACA-LTR	Copia	Acanthamoeba castellanii
+Copia-3_ACA-I	Copia	Acanthamoeba castellanii
+Copia-3_ACA-LTR	Copia	Acanthamoeba castellanii
+Copia-4_ACas-I	Copia	Acanthamoeba castellanii
+Copia-4_ACas-LTR	Copia	Acanthamoeba castellanii
+Copia-5_ACas-I	Copia	Acanthamoeba castellanii
+Copia-5_ACas-LTR	Copia	Acanthamoeba castellanii
+Copia-5_PP-LTR	LTR Retrotransposon	Physarum polycephalum
+Copia-6_ACas-I	Copia	Acanthamoeba castellanii
+Copia-6_ACas-LTR	Copia	Acanthamoeba castellanii
+CRE-1_ACas	CRE	Acanthamoeba castellanii
+Df_Skipper-1	Gypsy	Dictyostelium fasciculatum SH3
+DGLT-A1_I	Gypsy	Dictyostelium discoideum
+DGLT-A1_LTR	Gypsy	Dictyostelium discoideum
+DGLT-P_DD	Gypsy	Dictyostelium discoideum
+DINOLT1	L1	Dictyostelium discoideum
+DIRS-1_ACas	DIRS	Acanthamoeba castellanii
+DIRS-2_ACas	DIRS	Acanthamoeba castellanii
+DIRS1	DIRS	Dictyostelium discoideum
+Dl_DGLT-A1_I	Gypsy	Dictyostelium lacteum
+Dl_DGLT-A1_LTR	Gypsy	Dictyostelium lacteum
+Dl_DGLT-A2_I	Gypsy	Dictyostelium lacteum
+Dl_DGLT-A2_LTR	Gypsy	Dictyostelium lacteum
+Dl_Skipper-1_I	Gypsy	Dictyostelium lacteum
+Dl_Skipper-1_LTR	Gypsy	Dictyostelium lacteum
+Dl_TRE3-A	L1	Dictyostelium lacteum
+Dl_TRE5-A	Non-LTR Retrotransposon	Dictyostelium lacteum
+DRE	L1	Dictyostelium discoideum
+EnSpm-1N1_DDi	EnSpm/CACTA	Dictyostelium discoideum
+EnSpm-1_DDi	EnSpm/CACTA	Dictyostelium discoideum
+Gypsy-1-I_DD	Gypsy	Dictyostelium discoideum
+Gypsy-1-LTR_DD	Gypsy	Dictyostelium discoideum
+Gypsy-1_DFa-I	Gypsy	Dictyostelium fasciculatum
+Gypsy-1_DFa-LTR	Gypsy	Dictyostelium fasciculatum
+Gypsy-1_PPP-I	Gypsy	Polysphondylium pallidum PN500
+Gypsy-1_PPP-LTR	Gypsy	Polysphondylium pallidum PN500
+Gypsy-2_DFa-I	Gypsy	Dictyostelium fasciculatum
+Gypsy-2_DFa-LTR	Gypsy	Dictyostelium fasciculatum
+Gypsy-2_PPP-I	Gypsy	Polysphondylium pallidum PN500
+Gypsy-2_PPP-LTR	Gypsy	Polysphondylium pallidum PN500
+Gypsy-3_PPP-I	Gypsy	Polysphondylium pallidum PN500
+Gypsy-3_PPP-LTR	Gypsy	Polysphondylium pallidum PN500
+Gypsy-4_PPP-I	Gypsy	Polysphondylium pallidum PN500
+Gypsy-4_PPP-LTR	Gypsy	Polysphondylium pallidum PN500
+hAT-NA4_ALe	hAT	Acanthamoeba lenticulata
+hAT-NA5_AC	hAT	Acanthamoeba castellanii
+hAT-NA5_ALe	hAT	Acanthamoeba lenticulata
+hAT5_AC	hAT	Acanthamoeba castellanii
+HERO-1_PP	Hero	Physarum polycephalum
+Physarum-Pp1	Naiad/Chlamys	Physarum polycephalum
+Physarum-Pp2	Naiad/Chlamys	Physarum polycephalum
+piggyBacA-1_DD	piggyBac	Dictyostelium discoideum
+Pp_NLTR-B	Non-LTR Retrotransposon	Polysphondylium pallidum PN500
+Pp_NLTR-C	Non-LTR Retrotransposon	Polysphondylium pallidum PN500
+Pp_Skipper-2-I	Gypsy	Polysphondylium pallidum PN500
+Pp_TRE3-A	Non-LTR Retrotransposon	Polysphondylium pallidum PN500
+Pp_TRE3-B	Non-LTR Retrotransposon	Polysphondylium pallidum PN500
+RandI-1_ACas	RandI	Acanthamoeba castellanii
+RandI-2_ACas	RandI	Acanthamoeba castellanii
+RandI-3_ACas	RandI	Acanthamoeba castellanii
+RandI-4_ACas	RandI	Acanthamoeba castellanii
+RandI-5_ACas	RandI	Acanthamoeba castellanii
+SKIPPER_I	LTR Retrotransposon	Dictyostelium discoideum
+SKIPPER_LTR	LTR Retrotransposon	Dictyostelium discoideum
+Sola1-1_ACas	Sola1	Acanthamoeba castellanii
+Submariner_AC	Mariner/Tc1	Acanthamoeba castellanii
+TDD-5	Ginger2/TDD	Dictyostelium discoideum
+TDD3	L1	Dictyostelium discoideum
+TDD4	Ginger2/TDD	Dictyostelium discoideum
+TP2	Non-LTR Retrotransposon	Physarum polycephalum
+TRE3B	L1	Dictyostelium discoideum
+TRE3C	L1	Dictyostelium discoideum
+TRE3D	L1	Dictyostelium discoideum
+Utopia-1_ACa	NeSL	Acanthamoeba castellanii

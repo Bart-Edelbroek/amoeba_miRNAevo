@@ -1,0 +1,113 @@
+species	miRNA.ID	axtell_pass	mirbase_pass	mirgenedb_pass	passed
+ddis	ddi-mir-1179	TRUE	TRUE	TRUE	passed
+ddis	ddis_Cluster_1065(+)	TRUE	7 miR* reads	84% precision	failed: only one set of criteria
+ddis	ddi-mir-7097	TRUE	TRUE	TRUE	passed
+ddis	ddi-mir-1183	TRUE	TRUE	88% precision	passed
+ddis	ddi-mir-7096	TRUE	7 miR* reads	TRUE	passed
+ddis	ddi-mir-1186	TRUE	TRUE	TRUE	passed
+ddis	ddi.miR.7102	TRUE	TRUE	80% precision	passed
+ddis	ddi-mir-1176	TRUE	TRUE	TRUE	passed
+ddis	ddi-mir-1177	TRUE	TRUE	TRUE	passed
+ddis	ddis_Cluster_1861(+)	TRUE	TRUE	0 unpaired bases	failed: only one set of criteria
+dfir	dfi-mir-1192	TRUE	TRUE	85% precision	passed
+dfir	dfir_Cluster_2173(-)	one_library	1% miR* precision	TRUE	failed: only one set of criteria
+dfir	dfir_Cluster_4036(-)	TRUE	44% miR* precision	TRUE	failed: only one set of criteria
+dfir	dfir_Cluster_4338(+)	4 bulges	3% miR* precision	TRUE	failed: only one set of criteria
+dfir	dfi-mir-1191	TRUE	45% miR* precision	TRUE	passed
+dfir	dfi-mir-1190	TRUE	TRUE	0 unpaired bases	passed
+dfir	dfir_Cluster_5691(+)	71% precision	TRUE	71% precision	failed: only one set of criteria
+dfir	dfir_Cluster_5750(-)	TRUE	7% miR* precision	48% precision	failed: only one set of criteria
+dfir	dfir_Cluster_6082(-)	one_library	3% miR* precision	TRUE	failed: only one set of criteria
+dfir	dfi-mir-1195	TRUE	34% miR* precision	TRUE	passed
+dfir	dfir_Cluster_7309(-)	4 bulges	41% miR* precision	TRUE	failed: only one set of criteria
+dfir	dfir_Cluster_7940(-)	TRUE	2% miR* precision	81% precision	failed: only one set of criteria
+dfir	dfir_Cluster_8292(+)	TRUE	TRUE	62% precision	failed: only one set of criteria
+dfir	dfi-mir-1196	TRUE	TRUE	77% precision	passed
+dfir_new	dfir_new_Cluster_3105(+)	TRUE	44% miR* precision	TRUE	failed: only one set of criteria
+dfir_new	dfi-mir-1177	TRUE	TRUE	TRUE	passed
+dfir_new	dfir_new_Cluster_8914(-)	one_library	3% miR* precision	TRUE	failed: only one set of criteria
+dfir_new	dfi-mir-1194	TRUE	TRUE	TRUE	passed
+dfir_new	dfir_new_Cluster_9408(-)	TRUE	2% miR* precision	81% precision	failed: only one set of criteria
+dfir_new	dfir_new_Cluster_9751(+)	one_library	1% miR* precision	TRUE	failed: only one set of criteria
+dfir_new	dfir_new_Cluster_7310(-)	TRUE	7% miR* precision	48% precision	failed: only one set of criteria
+dfir_new	dfir_new_Cluster_7487(+)	71% precision	TRUE	68% precision	failed: only one set of criteria
+dfir_new	dfi-mir-1195	TRUE	34% miR* precision	TRUE	passed
+dfir_new	dfir_new_Cluster_5893(-)	4 bulges	3% miR* precision	TRUE	failed: only one set of criteria
+dfir_new	dfi-mir-1189	TRUE	TRUE	0 unpaired bases	passed
+dfir_new	dfir_new_Cluster_6432(+)	4 bulges	41% miR* precision	TRUE	failed: only one set of criteria
+dfir_new	dfi-mir-1190	TRUE	TRUE	0 unpaired bases	passed
+dfir_new	dfi-mir-1191	TRUE	45% miR* precision	TRUE	passed
+dfir_new	dfi-mir-1192	TRUE	TRUE	85% precision	passed
+dfir_new	dfir_new_Cluster_1344(-)	one_library	33% miR* precision	TRUE	failed: only one set of criteria
+dfir_new	dfir_new_Cluster_1558(-)	TRUE	TRUE	62% precision	failed: only one set of criteria
+dfir_new	dfi-mir-1196	TRUE	TRUE	77% precision	passed
+dfir_new	dfi-mir-1193	TRUE	TRUE	TRUE	passed
+dlac	dla-mir-1197	TRUE	5 miR* reads	TRUE	passed
+dlac	dla-mir-1198	TRUE	TRUE	TRUE	passed
+ppal	ppal_Cluster_2858(-)	TRUE	0% miR* precision	TRUE	failed: only one set of criteria
+ppal	ppa-mir-1199	TRUE	TRUE	0 unpaired bases	passed
+ppal	ppal_Cluster_3744(-)	TRUE	TRUE	0 unpaired bases	failed: only one set of criteria
+ppal	ppa-mir-1200	TRUE	5 miR* reads	TRUE	passed
+ppal	ppa-mir-1201	TRUE	4 miR* reads	TRUE	passed
+ppal	ppal_Cluster_5471(-)	TRUE	0% miR* precision	75% precision	failed: only one set of criteria
+ppal	ppa-mir-1202	TRUE	TRUE	TRUE	passed
+ppal	ppal_Cluster_5274(-)	one_library	1 miR* reads	TRUE	failed: only one set of criteria
+asub	asu-mir-1203	TRUE	4 miR* reads	TRUE	passed
+asub	asu-mir-1205	TRUE	6 miR* reads	TRUE	passed
+asub	asu-mir-1206	TRUE	5 miR* reads	TRUE	passed
+asub	asu-mir-1207	TRUE	7 miR* reads	TRUE	passed
+asub	asu-mir-1208	61% precision	TRUE	TRUE	passed
+asub	asu-mir-1204-P1	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1204-P2	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1204-P3	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1204-P4	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1204-P5	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1204-P6	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1204-P7	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1204-P8	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1209	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1210	55% precision	TRUE	TRUE	passed
+asub	asub_Cluster_3498(-)	43% precision	3 miR* reads	TRUE	failed: only one set of criteria
+asub	asu-mir-1211	TRUE	4 miR* reads	TRUE	passed
+asub	asu-mir-1212	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1213	TRUE	TRUE	TRUE	passed
+asub	asub_Cluster_3835(+)	4 bulges	7% miR* precision	TRUE	failed: only one set of criteria
+asub	asub_Cluster_3911(-)	TRUE	25% miR* precision	57% precision	failed: only one set of criteria
+asub	asu-mir-1214	TRUE	TRUE	TRUE	passed
+asub	asub_Cluster_4002(-)	TRUE	6 miR* reads	87% precision	failed: only one set of criteria
+asub	asu-mir-1215	TRUE	TRUE	TRUE	passed
+asub	asub_Cluster_4041(-)	TRUE	9% miR* precision	86% precision	failed: only one set of criteria
+asub	asu-mir-1216	TRUE	TRUE	TRUE	passed
+asub	asu-mir-1217	TRUE	TRUE	TRUE	passed
+dfas	dfas_Cluster_1424(+)	TRUE	13% miR* precision	52% precision	failed: only one set of criteria
+dfas	dfas_Cluster_1463(+)	57% precision	TRUE	62% precision	failed: only one set of criteria
+dfas	dfas_Cluster_1240(-)	TRUE	43% miR* precision	0 unpaired bases	failed: only one set of criteria
+dfas	dfa-mir-1218	TRUE	6 miR* reads	TRUE	passed
+dfas	dfas_Cluster_1068(-)	TRUE	4 miR* reads	86% precision	failed: only one set of criteria
+dfas	dfas_Cluster_921(-)	TRUE	2% miR* precision	53% precision	failed: only one set of criteria
+dfas	dfas_Cluster_922(-)	TRUE	29% miR* precision	88% precision	failed: only one set of criteria
+dfas	dfa-mir-1219	TRUE	TRUE	TRUE	passed
+dfas	dfa-mir-1220-P1	TRUE	TRUE	TRUE	passed
+dfas	dfa-mir-1220-P2	TRUE	TRUE	TRUE	passed
+ppol	ppo-mir-1221	71% precision	TRUE	TRUE	passed
+ppol	ppo-mir-1222	TRUE	TRUE	TRUE	passed
+ppol	ppol_Cluster_1701(+)	71% precision	TRUE	81% precision	failed: only one set of criteria
+ppol	ppo-mir-1223	TRUE	4 miR* reads	TRUE	passed
+ppol	ppol_Cluster_2782(+)	one_library	33% miR* precision	TRUE	failed: only one set of criteria
+ppol	ppol_Cluster_4525(+)	TRUE	4 miR* reads	0 unpaired bases	failed: only one set of criteria
+ppol	ppo-mir-1224	TRUE	9 miR* reads	TRUE	passed
+ppol	ppol_Cluster_6245(+)	TRUE	17% miR* precision	TRUE	failed: only one set of criteria
+ppol	ppol_Cluster_8717(+)	TRUE	1% miR* precision	TRUE	failed: only one set of criteria
+ppol	ppol_Cluster_8730(-)	TRUE	29% miR* precision	TRUE	failed: only one set of criteria
+ppol	ppo-mir-1225	TRUE	TRUE	TRUE	passed
+ppol	ppo-mir-1226	TRUE	48% miR* precision	TRUE	passed
+ppol	ppol_Cluster_13697(+)	2 bulges	TRUE	52% precision	failed: only one set of criteria
+ppol	ppo-mir-1227	TRUE	TRUE	TRUE	passed
+acas	aca-mir-1228	TRUE	TRUE	TRUE	passed
+alen	ale-mir-1228-P1	50% precision	TRUE	TRUE	passed
+alen	ale-mir-1229	TRUE	3 miR* reads	TRUE	passed
+alen	alen_Cluster_1703(+)	TRUE	4 miR* reads	88% precision	failed: only one set of criteria
+alen	ale-mir-1228-P2	50% precision	TRUE	TRUE	passed
+alen	ale-mir-1230-P1	TRUE	TRUE	TRUE	passed
+alen	ale-mir-1230-P2	TRUE	TRUE	TRUE	passed
+alen	alen_Cluster_5165(+)	1 bulges	TRUE	67% precision	failed: only one set of criteria
