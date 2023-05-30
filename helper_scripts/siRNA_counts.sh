@@ -1,0 +1,1 @@
+featureCounts -a ../data_in/ddis/sRNAs_ddis_mature.gff -T 8 -O -M --fraction --fracOverlap 1  -t siRNA -g Name -o ../data_in/siRNA_counts.txt mapped/* 

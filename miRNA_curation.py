@@ -4,7 +4,6 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 import regex
 import sys
-from sys import argv
 from collections import OrderedDict
 sys.path.append("/usr/local/lib/python3.7/site-packages/RNA")
 import RNA

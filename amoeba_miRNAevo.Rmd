@@ -3,9 +3,9 @@ title: "Analysis of microRNAs identified in Amoebzoa"
 author: "Bart Edelbroek"
 date: "11/24/2021"
 output:
+  pdf_document: default
   html_document:
     code_folding: hide
-  pdf_document: default
   word_document: default
 editor_options:
   chunk_output_type: inline
@@ -27,11 +27,18 @@ library(seqinr)
 library(RColorBrewer)
 library(ggbeeswarm)
 library(circlize)
+library(DESeq2)
+library(nlme)
+library(stringr)
+library(ComplexHeatmap)
+library(ggrepel)
+
 
 palette2 <- c("#AE2012","#CA6B02","#FFCF3B","#B5E48C","#76C893","#34A0A4","#1E6091")
 palette3 <- c("#AE2012","#FFCF3B","#E8EDED","#76C893","#34A0A4","#1E6091")
 ```
 
+# miRNA identification
 Quantified the number of reads mapping to different parts of the amoeba genome, E. coli, or unmapped. Plotted the length profile of the reads mapping to the genome but not rRNA. The data_in was generated using mapping_percentages.sh and extract_length_profiles.sh helper scripts.
 
 ```{r pre-miR-analysis (mapping etc.), fig.height=4, fig.width=7, message=FALSE, warning=FALSE}
@@ -524,6 +531,7 @@ rownames(SAF) <- c(1:nrow(SAF))
 
 ```
 
+# miRNA characteristics
 Following identification of the miRNAs, the characteristics of the miRNAs are analyzed. For those characteristics where it is relevant, the comparison is made with Plants and Animals. Plant and Animal miRNA sequences were accesses from PmiREN 2.0 and MirGeneDB 2.1 respectively. 
 
 ```{r Nucleotide logo miRNAs, fig.height=3, fig.width=10, message=FALSE, warning=FALSE}
@@ -647,7 +655,7 @@ ggsave("plots/miRNA_lengthprofile.tiff",c, device = "tiff", dpi = 200, scale = 2
 ```
 
 
-```{r Plot of miRNA origins, fig.height=4, fig.width=8}
+```{r Plot of miRNA origins, fig.height=4, fig.width=8, message=FALSE, warning=FALSE}
 plotdat <-  comb_passed
 plotdat$origin[is.na(plotdat$origin)] <- "not_annotated"
 plotdat$origin[grep("intronic_intergenic", plotdat$origin)] <- "intronic_sense"
@@ -677,7 +685,7 @@ ggsave("plots/miRNA_origin.tiff", d, device = "tiff", dpi = 200, width = 6, heig
 ```
 
 
-```{r Plots of miRNA characteristics,  fig.width=8, fig.height=5}
+```{r Plots of miRNA characteristics,  fig.width=8, fig.height=5, message=FALSE, warning=FALSE}
 e <- ggplot(plotdat[plotdat$species!="dfir",], aes(species,y = nchar(pri.miRNA)-18, fill = miRNA_family))+
   geom_beeswarm(shape=21, cex = 1.2, size = 1.5 , method = "center", priority = "random")+
   coord_flip()+
@@ -722,7 +730,7 @@ ggsave("plots/loopsize_plants_animals.tiff",f, device = "tiff", dpi = 200, width
 
 ```
 
-```{r AT of miRNAs and intergenic regions, fig.width=6, fig.height=4}
+```{r AT of miRNAs and intergenic regions, fig.width=6, fig.height=4, message=FALSE, warning=FALSE}
 ATrich_miRNA <- data.frame(read.csv("data_in/ATn_rich_intergenic_miRNA.csv"))
 ATrich_miRNA$percentageAT <- (ATrich_miRNA$A+ATrich_miRNA$T)/(ATrich_miRNA$total - ATrich_miRNA$N)*100
 ATrich_miRNA$species <- factor(ATrich_miRNA$species, levels = rev(species_list))
@@ -802,7 +810,7 @@ ggsave("plots/AT_miRNA_hairpin.tiff", a, device = tiff, dpi = 200, width = 5, he
 
 
 
-```{r Output table with miRNA characteristics}
+```{r Output table with miRNA characteristics, message=FALSE, warning=FALSE}
 # miRPM <- data.frame()
 # for (species in species_list) {
 #   fcounts1 <- featureCounts(files = paste0("../shstack_out_fraction/",species,"/",species,"1.bam"), annot.ext = SAF[SAF$Species==species,])
@@ -843,7 +851,8 @@ write.table(
 
 ```
 
-Using Satsuma2, the synteny blocks between D. firmibasis an D. discoideum were identified, with the results summarised in data_in/satsuma_synteny.out. Here, the synteny blocks are linked together if they are within 5000nt of eachother. The first circos plot shows all the synteny that was identified between the two genomes; the second plot shows only those synteny blocks that contain a miRNA on either genome, with the label identifying which miRNA is on the region. 
+# Synteny of miRNAs in D. firmibasis and D. discoideum
+Using Satsuma2, the synteny blocks between D. firmibasis and D. discoideum were identified, with the results summarised in data_in/satsuma_synteny.out. Here, the synteny blocks are linked together if they are within 5000nt of eachother. The first circos plot shows all the synteny that was identified between the two genomes; the second plot shows only those synteny blocks that contain a miRNA on either genome, with the label identifying which miRNA is on the region. 
 
 ```{r Satsuma synteny blocks miRNAs, fig.height=9.2, fig.width=9.6, message=FALSE, warning=FALSE}
 dfir_sats_in <- read.table("data_in/satsuma_synteny.out", sep = "\t", header = F)
@@ -984,4 +993,158 @@ dev.off()
 circos.clear()
 ```
 
+# Effects of dicer on miRNA abundance and growth speed
+Small RNA sequencing was performed from wildtype cells at vegetative stage (BioSample SAMN35084095), wildtype cells at slug stage (BioSample SAMN35084096), drnB- knockout cells at vegetative stage (BioSample SAMN35084097), and drnB- knockout cells at slug stage (BioSample SAMN35084098). Following mapping of sRNAs, the counts mapping to miRNAs and siRNAs were quantified (data_in/miRNA_counts.txt, data_in/siRNA_counts.txt). Here, DGE of the miRNAs and siRNAs is performed. 
+
+```{r drnBKO sRNA differential gene expression analysis, message=FALSE, warning=FALSE}
+# Load counts
+
+micounts <- as.data.frame(read.table("data_in/miRNA_counts.txt", sep = "\t", header = T))
+sicounts <- as.data.frame(read.table("data_in/siRNA_counts.txt", sep = "\t", header = T))
+counts <- rbind(micounts,sicounts)
+colnames(counts) <- gsub("mapped.", "", colnames(counts))
+rownames(counts) <- counts[,1]
+counts <- counts[,-1*1:6]
+counts <- counts[apply(counts,1,sum)>0,] # remove genes with no reads
+
+
+# Create metadata table, from file names
+meta_data_rna <- do.call("rbind",sapply(colnames(counts), function(x){strsplit(x, "\\.|_")})) %>%
+	data.frame() %>%
+	select(StrainID = X1, Genotype = X2, Extra = X3, Time = X4, Rep = X5) %>%
+	mutate(Time = str_pad(gsub("h", "", Time), 2, pad="0")) %>%
+	mutate(sample_id = rownames(.)) %>%
+	arrange(StrainID, Time, Rep)
+
+# Reorder samples
+counts <- counts[, rownames(meta_data_rna)]
+
+# Reformat sample names
+colnames(counts) <- meta_data_rna$sample_id
+rownames(meta_data_rna) <- meta_data_rna$sample_id
+
+max_pval <- 0.05
+
+dds <- DESeqDataSetFromMatrix(countData = counts, colData = meta_data_rna, design = formula(~ Genotype + Time))
+dds <- DESeq(dds)
+res <- results(dds, contrast = c("Genotype","drnB","wt"))
+dev_genes <- rownames(res)[which(res$padj < max_pval)]
+dev_genes
+
+# Do regularized log transformation, then plot all genes affected by developmental time in a heatmap
+rld  <- rlog(dds, blind=F)
+
+miRNAs <- micounts$Geneid
+siRNAs <- c("DIRS1","TRE3B","SKIPPER_I","EnSpm-1_DDi","TRE3D","TRE3C")
+
+plotdat <- assay(rld)
+
+colnames(plotdat) <- c("wt_0h_A","wt_0h_B","wt_0h_C","wt_16h_A","wt_16h_B",
+                       "drnB-_0h_A","drnB-_0h_B","drnB-_0h_C","drnB-_16h_A","drnB-_16h_B")
+
+#png("plots/miRNA_drnB_heatmap.png",width=5,height=3.5,units="in",res=200)
+a <- pheatmap(plotdat[c(miRNAs),], scale = "row", cluster_cols = F, heatmap_legend_param = list(title="z-score"))
+draw(a)
+#dev.off()
+
+
+volc <- data.frame(logFC=res$log2FoldChange, negLogPval=-log10(res$padj), name=rownames(res), stringsAsFactors=F)
+
+
+rownames(volc) <- volc$name
+volc$type <- as.character(volc$name)
+volc$type[grep("ddi",volc$name)] <- "miRNA"
+volc$type[volc$name %in% siRNAs] <- "siRNA"
+
+plotdat <- volc[volc$type=="miRNA"|volc$type=="siRNA",]
+plotdat$name[plotdat$type=="siRNA"] <- ""
+
+b <- ggplot(plotdat, aes(logFC, negLogPval, label = name, fill = type))+
+  geom_hline(yintercept = -log10(0.05), linetype = "dashed", alpha = 0.5)+
+  geom_vline(xintercept = c(-1,1), linetype = "dashed", alpha = 0.5)+
+  geom_point(shape = 21)+
+  geom_text_repel(data = plotdat[plotdat$type == "miRNA",],max.overlaps = Inf, size = 3.5, box.padding = 0.5, force_pull = 0 )+coord_cartesian(xlim = c(-8,8))+
+  theme_bw()+labs(y = "-log10(pval)", title = "drnB- vs wt")
+b
+ggsave("plots/drnB_miRNA_volcano.tiff",b,device = tiff, dpi = 200, width = 4, height = 3.5)
+
+```
+
+Growth of drnB- and wildtype strains was quantified and is plotted as growthcurves, and barplots with doubling time in hours.
+
+```{r drnBKO growthcurves, fig.height=3.5, fig.width=7.5, message=FALSE, warning=FALSE}
+kleb_counts <- data.frame(t(read.delim("data_in/growthcurve_counts/drnb_klebsiella.txt", header = F, row.names = 1)))
+kleb_growth <- pivot_longer(kleb_counts, -c(time, techrep))
+kleb_growth %>% mutate(time = as.numeric(time),
+                       value = as.numeric(value)*1e4) -> kleb_growth
+
+axenic_counts <- data.frame(t(read.delim("data_in/growthcurve_counts/drnb_axenic.txt", header = F, row.names = 1)))
+axenic_growth <- pivot_longer(axenic_counts, -c(time, techrep))
+axenic_growth %>% mutate(time = as.numeric(time),
+                       value = as.numeric(value)*1e4) -> axenic_growth
+
+all_growth <- rbind(axenic_growth,kleb_growth)
+all_growth %>% separate(name, c("strain","growth","biorep"), "_", remove = F) -> all_growth
+
+all_growth$ID <- factor(paste(all_growth$strain,all_growth$growth,sep = "_"),
+                        levels = c("wt_klebsiella","drnb_klebsiella","wt_axenic","drnb_axenic"), 
+                        labels = c("wt klebsiella","drnB- klebsiella","wt axenic","drnB- axenic"))
+
+
+a <- ggplot(all_growth[all_growth$growth=="axenic",], aes(time, value, color = ID, shape = biorep))+
+  geom_point(size=2)+
+  geom_smooth(method = "lm", se = F, linetype = "dashed", size = 0.5)+
+  scale_y_log10()+
+  scale_color_manual(values = c("#1F78B4","#33A02C"))+
+  labs(x = "Time (h)", y = "Number of cells / ml", color = "strain + growth condition")+
+  scale_shape_manual(values = c(0,1,2,5))+
+  theme(legend.title=element_text(size=10),
+        panel.background = element_rect(fill = NA),
+        panel.grid = element_line(colour = "grey90"),
+        panel.border = element_rect(size = 1, fill = NA),
+        legend.key = element_rect(fill = "white")
+        )
+
+
+doubling_times <- data.frame(cbind(doubling_time = round(1/coef(lmList(log2(value)~time|name , data = all_growth, na.action=na.exclude)),digits = 2)[,2],
+                        strain = rep(c("drnb","wt"), each = 7),
+                        growth = rep(c(rep("axenic" ,4),rep("klebsiella",3)),2))
+)
+print(doubling_times)
+doubling_times$doubling_time <- round(as.numeric(doubling_times$doubling_time), digits = 2)
+doubling_times$ID <- factor(paste(doubling_times$strain, doubling_times$growth, sep = "_"),
+                            levels = c("wt_klebsiella","drnb_klebsiella","wt_axenic","drnb_axenic"))
+
+doubling_times %>% 
+  group_by(ID) %>%
+  summarise(mean_doubling_time = mean(doubling_time),
+            std = sd(doubling_time)) -> plotdat
+
+
+ttests <- compare_means(doubling_time ~ ID, data = doubling_times, method = "t.test")
+plot_labels <- rep("",4)
+plot_labels[c(1,3)] <- paste0("p=",round(ttests$p,digits = 3))[c(1,6)]
+
+
+b <- ggplot(plotdat[3:4,], aes(ID,mean_doubling_time))+
+  #geom_bar(stat = "identity", color = "black", fill = c("#A6CEE3","#1F78B4","#B2DF8A","#33A02C"))+
+  geom_bar(stat = "identity", color = "black", fill = c("#1F78B4","#33A02C"))+
+  geom_text(aes(label = round(mean_doubling_time, digits = 1)), vjust = 1.5)+
+  geom_errorbar(aes(ymin=mean_doubling_time,ymax=mean_doubling_time+std), width = .2)+
+  geom_text(aes(label = plot_labels[3:4], y=33), hjust = 0.1)+
+  labs(y = "Doubling time (h)", x = "")+
+  #scale_x_discrete(labels = c("wt klebsiella","drnB- klebsiella","wt axenic","drnB- axenic"))+
+  scale_x_discrete(labels = c("wt axenic","drnB- axenic"))+
+  theme(axis.text.x = element_text(color = "black", angle = 45, hjust = 1, size = 12),
+        panel.background = element_rect(fill = NA),
+        panel.grid = element_line(colour = "grey90")
+        #, panel.border = element_rect(size = 1, fill = NA)
+        )
+
+arr_plot <- ggarrange(a,b, widths = c(3,1))
+
+arr_plot
+
+ggsave("plots/arrange_curve_dt.tiff",arr_plot,"tiff", dpi = 200, height = 3.5, width = 7.5)
+```
 
