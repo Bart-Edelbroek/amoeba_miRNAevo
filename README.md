@@ -6,4 +6,4 @@ Potential miRNA clusters, generated using Shortstack (https://github.com/MikeAxt
 Prerequisites: Python 3, Biopython, RNAlib, matplotlib, numpy
 
 ## microRNA analysis
-Following miRNA curation, high confidence miRNAs are identified and further analysed in **amoeba_miRNAevo.Rmd**. The data for the analysis is located in the 'data_in' and is mostly derived from the miRNA_curation.py script and other scripts located in the 'helper_scripts' folder. The plots generated in the analysis is located in the 'plots' folder. Tables and other data generated from the analysis are located in the 'data_out' folder. 
+Following miRNA curation, high confidence miRNAs are identified and further analysed in **amoeba_miRNAevo.Rmd**. The data for the analysis is located in the 'data_in' and is mostly derived from the miRNA_curation.py script and other scripts located in the 'helper_scripts' folder. The plots generated in the analysis is located in the 'plots' folder. Tables and other data generated from the analysis are located in the 'data_out' folder. In order to perform the miRNA conservation search, refer to the 'helper_scripts/miRNA_conservation_search/' folder.
