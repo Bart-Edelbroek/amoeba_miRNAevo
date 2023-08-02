@@ -1,0 +1,2 @@
+# Helper scripts
+Code used to generate data for analysis of miRNAs, such as sRNA length profiles and percentages of sRNAs mapping to different genetic elements. To annotate transposable elements and ncRNAs from Rfam, see **annotate_genomic_elements**. Scripts for performing a search of miRNAs conserved in other related genomes, are located in the **miRNA_conservation_search** folder. Calculating the percentage of A+T nucleotides in the genome, relies on the gene annotations as well as annotations of ncRNAs and transposable elements. 
