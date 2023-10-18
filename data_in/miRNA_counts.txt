@@ -1,9 +1,0 @@
-# Program:featureCounts v2.0.3; Command:"featureCounts" "-a" "reference/sRNAs_ddis_mature.gff" "-T" "8" "-O" "-M" "--fraction" "--fracOverlap" "1" "--fracOverlapFeature" "1" "-t" "miRNA" "-g" "Name" "-o" "miRNA_counts.txt" "mapped/FS11-wt-RK-0h-A_S35_L004_R1_001.bam" "mapped/FS11-wt-RK-0h-B_S43_L004_R1_001.bam" "mapped/FS11-wt-RK-0h-C_S51_L005_R1_001.bam" "mapped/FS11-wt-RK-16h-A_S59_L006_R1_001.bam" "mapped/FS11-wt-RK-16h-B_S67_L007_R1_001.bam" "mapped/FS27-drnB-KO-0h-A_S36_L004_R1_001.bam" "mapped/FS27-drnB-KO-0h-B_S44_L005_R1_001.bam" "mapped/FS27-drnB-KO-0h-C_S52_L005_R1_001.bam" "mapped/FS27-drnB-KO-16h-A_S60_L006_R1_001.bam" "mapped/FS27-drnB-KO-16h-B_S68_L007_R1_001.bam" 
-Geneid	Chr	Start	End	Strand	Length	mapped/FS11-wt-RK-0h-A_S35_L004_R1_001.bam	mapped/FS11-wt-RK-0h-B_S43_L004_R1_001.bam	mapped/FS11-wt-RK-0h-C_S51_L005_R1_001.bam	mapped/FS11-wt-RK-16h-A_S59_L006_R1_001.bam	mapped/FS11-wt-RK-16h-B_S67_L007_R1_001.bam	mapped/FS27-drnB-KO-0h-A_S36_L004_R1_001.bam	mapped/FS27-drnB-KO-0h-B_S44_L005_R1_001.bam	mapped/FS27-drnB-KO-0h-C_S52_L005_R1_001.bam	mapped/FS27-drnB-KO-16h-A_S60_L006_R1_001.bam	mapped/FS27-drnB-KO-16h-B_S68_L007_R1_001.bam
-ddi.miR.7097	NC_007089.4;NC_007089.4	3739209;3739276	3739229;3739296	-;-	42	630	323	324	618	187	6	10	4	4	9
-ddi.miR.1183	NC_007090.3;NC_007090.3	735815;735922	735836;735943	-;-	44	78	25	13	705	710	54	43	23	359	363
-ddi.miR.1179	NC_007088.5;NC_007088.5	1649220;1649284	1649240;1649307	-;-	45	0	0	0	8	4	0	0	0	0	0
-ddi.miR.1176	NC_007091.3;NC_007091.3	172141;172203	172161;172223	+;+	42	2665	1680	1487	3141	993	23	14	17	42	548
-ddi.miR.can_D1	NC_007090.3;NC_007090.3	1706374;1706440	1706394;1706460	+;+	42	40	31	16	71	16	0	0	1	1	0
-ddi.miR.7096	NC_007090.3;NC_007090.3	1476911;1476977	1476931;1476997	-;-	42	21	13	7	100	38	0	0	0	0	0
-ddi.miR.1177	NC_007091.3;NC_007091.3	593956;594068	593976;594088	+;+	42	56	55	47	124	51	1	0	0	1	0
