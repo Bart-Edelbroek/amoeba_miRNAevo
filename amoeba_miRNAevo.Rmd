@@ -34,8 +34,8 @@ library(ComplexHeatmap)
 library(ggrepel)
 
 
-palette2 <- c("#AE2012","#CA6B02","#FFCF3B","#B5E48C","#76C893","#34A0A4","#1E6091")
-palette3 <- c("#AE2012","#FFCF3B","#E8EDED","#76C893","#34A0A4","#1E6091")
+palette2 <- c("#AE2012","#CA6B02","#FFCF3B","#B5E48C","#76C893","#34A0A4","#1E6091","#FFFFFF")
+palette3 <- c("#AE2012","#FFCF3B","#E8EDED","#76C893","#34A0A4","#1E6091","#FFFFFF")
 ```
 
 # miRNA identification
@@ -583,48 +583,22 @@ all_LP_mir$rna_type[all_LP_mir$rna_type=="primir"] <- "miRNA"
 all_LP_mir$rna_type[all_LP_mir$rna_type=="complementary_rRNA"|
             all_LP_mir$rna_type=="complementary_snRNA"|
             all_LP_mir$rna_type=="complementary_tRNA"|
-            all_LP_mir$rna_type=="complementary_ncRNA"] <- "intergenicRNA"
-all_LP_mir$rna_type[all_LP_mir$rna_type=="ncRNA"] <- "other_ncRNA"
+            all_LP_mir$rna_type=="complementary_ncRNA"|
+            all_LP_mir$rna_type=="intergenicRNA"] <- "intergenic RNA"
+all_LP_mir$rna_type[all_LP_mir$rna_type=="ncRNA"] <- "other ncRNA"
+all_LP_mir$rna_type[all_LP_mir$rna_type=="complementary_mRNA"] <- "complementary to mRNA"
 all_LP_mir <- all_LP_mir %>% group_by(readlength, rna_type, species) %>% summarise(reads = sum(reads))
-all_LP_mir$rna_type <- factor(all_LP_mir$rna_type, levels = c("miRNA","intergenicRNA","transposon","tRNA","snRNA","mRNA","complementary_mRNA","rRNA","other_ncRNA"))
+all_LP_mir$rna_type[(all_LP_mir$species=="alen"|all_LP_mir$species=="ppol"|all_LP_mir$species=="dfir"|all_LP_mir$species=="dfir_new")&all_LP_mir$rna_type=="intergenic RNA"] <- "genes not annotated"
+all_LP_mir$rna_type <- factor(all_LP_mir$rna_type, levels = c("miRNA","intergenic RNA","genes not annotated","transposon","tRNA","snRNA","mRNA","complementary to mRNA","rRNA","other ncRNA"))
 grouped_all_LP_mir <- all_LP_mir %>% group_by(rna_type ,species ) %>% summarise(reads = sum(reads))
 all_LP_mir$reads <- all_LP_mir$reads/1E6
 
-
-LP_mir_sizesel <- all_LP_mir[all_LP_mir$readlength>=20 & all_LP_mir$readlength<=24, ] 
-LP_mir_sizesel$rna_type[LP_mir_sizesel$rna_type=="complementary_mRNA"]<-"intergenicRNA"
-LP_mir_sizesel %>% group_by(rna_type, species) %>%
-  summarise(sum(reads)) -> LP_mir_sizesel
-
-plotdat <- LP_mir_sizesel[
-  #LP_mir_sizesel$rna_type!="snRNA"&LP_mir_sizesel$rna_type!="tRNA"&LP_mir_sizesel$rna_type!="other_ncRNA"&
-  LP_mir_sizesel$rna_type!="rRNA"&LP_mir_sizesel$rna_type!="mRNA"&
-  LP_mir_sizesel$species!="dfir_new",]
-plotdat$species <- factor(plotdat$species, levels = rev(species_list))
-a <- ggplot(plotdat, aes(x=species,y=plotdat$`sum(reads)`, fill = rna_type))+
-  geom_bar(stat = "identity", position  = "fill", color="#222222")+
-  coord_flip()+
-  theme(legend.position = "right", 
-        panel.background = element_blank(), 
-        axis.text.y = element_text(color="black",size=14, face = "italic"),
-        axis.text.x = element_text(size = 12),
-        legend.text = element_text(size = 12),
-        axis.title.x = element_text(size = 12))+
-  scale_fill_manual(values = palette3 , guide = guide_legend(reverse = FALSE), name = "RNA type:")+
-  scale_x_discrete(labels = labels, name = element_blank())+
-  scale_y_continuous(name = "Fraction of 20-24nt ncRNA reads")
-a
-ggsave("plots/miRNA_expression.tiff", a, device = "tiff", dpi = 200, scale = 2, width = 3, height = 2.5)
-```
-
-
-```{r Length profiles with annotations,  fig.height=8, fig.width=10, message=FALSE, warning=FALSE}
-b <- ggplot(all_LP_mir[all_LP_mir$rna_type!="other_ncRNA"&all_LP_mir$rna_type!="snRNA"&all_LP_mir$rna_type!="rRNA"&all_LP_mir$species!="dfir",],
+b <- ggplot(all_LP_mir[all_LP_mir$rna_type!="other ncRNA"&all_LP_mir$rna_type!="snRNA"&all_LP_mir$rna_type!="rRNA"&all_LP_mir$species!="dfir",],
   aes(readlength,reads, fill = rna_type))+ 
   facet_wrap(~species, scales = "free", ncol = 3, labeller = labeller(species = labels))+
   geom_bar(stat = "identity", color="#333333", size = 0.6, width = 0.8)+
   labs(y = "million mapped reads", x="read length",fill="RNA type")+
-    scale_fill_manual(values  = palette2[c(1,7,6,4,3,2)])+
+    scale_fill_manual(values  = palette2[c(1,7,8,6,4,3,2)])+
     theme(legend.key.size = unit(0.5, 'cm'),
         legend.title = element_text(size = 12),
         legend.text = element_text(size = 10),
@@ -636,11 +610,13 @@ b <- ggplot(all_LP_mir[all_LP_mir$rna_type!="other_ncRNA"&all_LP_mir$rna_type!="
 b
 ggsave("plots/lengthprofile_with_miR.tiff", b, device = "tiff", dpi = 200, scale = 2, width = 5, height = 4)
 
-c <- ggplot(all_LP_mir[all_LP_mir$rna_type=="miRNA"&all_LP_mir$species!="dfir",],
+plotdat <- all_LP_mir[all_LP_mir$rna_type=="miRNA"&all_LP_mir$species!="dfir_new",]
+plotdat$reads <- plotdat$reads * 1e6
+c <- ggplot(plotdat,
   aes(readlength,reads, fill = rna_type))+ 
   facet_wrap(~species, scales = "free", ncol = 3, labeller = labeller(species = labels))+
   geom_bar(stat = "identity", color="#333333", size = 0.6, width = 0.8)+
-  labs(y = "million mapped reads", x="read length",fill="RNA type")+
+  labs(y = "number of mapped reads", x="read length",fill="RNA type")+
     scale_fill_manual(values  = palette2[c(1,7,6,4,3,2)])+
     coord_cartesian(xlim = c(17.9,26.1))+
     theme(legend.key.size = unit(0.5, 'cm'),
@@ -811,20 +787,20 @@ ggsave("plots/AT_miRNA_hairpin.tiff", a, device = tiff, dpi = 200, width = 5, he
 
 
 ```{r Output table with miRNA characteristics, message=FALSE, warning=FALSE}
-# miRPM <- data.frame()
-# for (species in species_list) {
-#   fcounts1 <- featureCounts(files = paste0("../shstack_out_fraction/",species,"/",species,"1.bam"), annot.ext = SAF[SAF$Species==species,])
-#   fcounts2 <- featureCounts(files = paste0("../shstack_out_fraction/",species,"/",species,"2.bam"), annot.ext = SAF[SAF$Species==species,])
-#   fcounts3 <- featureCounts(files = paste0("../shstack_out_fraction/",species,"/",species,"3.bam"), annot.ext = SAF[SAF$Species==species,])
-#   RPMs <- cbind(fcounts1$annotation[,1],
-#                 rowMeans(cbind(fcounts1$counts/(fcounts1$stat[1,2]+fcounts1$stat[2,2]),
-#                                fcounts2$counts/(fcounts2$stat[1,2]+fcounts2$stat[2,2]),
-#                                fcounts3$counts/(fcounts3$stat[1,2]+fcounts3$stat[2,2])))*1e6,
-#                 species)
-#   miRPM <- rbind(miRPM,RPMs)
-# }
-# colnames(miRPM) <- c("miRNA.ID","rpm","species")
-# write.table(miRPM, file = "data_in/miRNA_expression_levels.tsv", sep = "\t", row.names = F, quote = F)
+miRPM <- data.frame()
+for (species in species_list) {
+  fcounts1 <- featureCounts(files = paste0("../shstack_out_fraction/",species,"/",species,"1.bam"), annot.ext = SAF[SAF$Species==species,])
+  fcounts2 <- featureCounts(files = paste0("../shstack_out_fraction/",species,"/",species,"2.bam"), annot.ext = SAF[SAF$Species==species,])
+  fcounts3 <- featureCounts(files = paste0("../shstack_out_fraction/",species,"/",species,"3.bam"), annot.ext = SAF[SAF$Species==species,])
+  RPMs <- cbind(fcounts1$annotation[,1],
+                rowMeans(cbind(fcounts1$counts/(fcounts1$stat[1,2]+fcounts1$stat[12,2]),
+                               fcounts2$counts/(fcounts2$stat[1,2]+fcounts2$stat[12,2]),
+                               fcounts3$counts/(fcounts3$stat[1,2]+fcounts3$stat[12,2])))*1e6,
+                species)
+  miRPM <- rbind(miRPM,RPMs)
+}
+colnames(miRPM) <- c("miRNA.ID","rpm","species")
+write.table(miRPM, file = "data_in/miRNA_expression_levels.tsv", sep = "\t", row.names = F, quote = F)
 miRPM <- read.table("data_in/miRNA_expression_levels.tsv", sep = "\t", header = T)
 
 miRPM$species <- factor(miRPM$species, levels = rev(species_list))
@@ -834,10 +810,11 @@ miRNA_characteristics <- comb_passed[,c("miRNA.ID","mir_seq","fivep_reads","thre
 miRNA_characteristics$pre_miRNA_size <- nchar(comb_passed$pri.miRNA)-18
 miRNA_characteristics$fivep_reads <- miRNA_characteristics$fivep_reads+miRNA_characteristics$threep_reads
 miRNA_characteristics$threep_reads <- miRPM$rpm
-colnames(miRNA_characteristics) <- c("miRNA.ID","miRNA_sequence","miRNA_counts","miRNA_RPM","precision","genomic_context","genomic_location","miRNA_family","folding energy (kcal/mol)","pre-miRNA size (nt)")
+miRNA_characteristics$strand <- SAF$Strand
+colnames(miRNA_characteristics) <- c("miRNA.ID","miRNA_sequence","miRNA_counts","miRNA_RPM","precision","genomic_context","genomic_location","miRNA_family","folding energy (kcal/mol)","pre-miRNA size (nt)","strand")
+miRNA_characteristics <- miRNA_characteristics[,c(1:7,11,8:10)]
 
-
-miRNA_characteristics$miRNA_RPM <- round(miRNA_characteristics$miRNA_RPM, digits = 0)
+miRNA_characteristics$miRNA_RPM <- signif(miRNA_characteristics$miRNA_RPM, digits = 3)
 
 miRNA_characteristics$precision <- round(miRNA_characteristics$precision, 3)*100
 
@@ -999,42 +976,37 @@ Small RNA sequencing was performed from wildtype cells at vegetative stage (BioS
 ```{r drnBKO sRNA differential gene expression analysis, message=FALSE, warning=FALSE}
 # Load counts
 
-micounts <- as.data.frame(read.table("data_in/miRNA_counts.txt", sep = "\t", header = T))
+mi5pcounts <- as.data.frame(read.table("data_in/miRNA_5p_counts.txt", sep = "\t", header = T))
+mi3pcounts <- as.data.frame(read.table("data_in/miRNA_3p_counts.txt", sep = "\t", header = T))
+micounts <- data.frame(bind_rows(mi5pcounts, mi3pcounts) %>% group_by(substr(Geneid,1,12)) %>% summarise_if(is.numeric, sum, na.rm = TRUE))
+rownames(micounts) <- micounts[,1]
 sicounts <- as.data.frame(read.table("data_in/siRNA_counts.txt", sep = "\t", header = T))
-counts <- rbind(micounts,sicounts)
-colnames(counts) <- gsub("mapped.", "", colnames(counts))
-rownames(counts) <- counts[,1]
-counts <- counts[,-1*1:6]
+rownames(sicounts) <- sicounts$Geneid
+counts <- rbind(micounts[,-1*1:4],sicounts[,-1*1:6])
+colnames(counts) <- paste(rep(c("wt","drnBKO"), each = 5),c("0","0","0","16","16"),c("A","B","C","A","B"),sep = "_")
 counts <- counts[apply(counts,1,sum)>0,] # remove genes with no reads
-
 
 # Create metadata table, from file names
 meta_data_rna <- do.call("rbind",sapply(colnames(counts), function(x){strsplit(x, "\\.|_")})) %>%
 	data.frame() %>%
-	select(StrainID = X1, Genotype = X2, Extra = X3, Time = X4, Rep = X5) %>%
-	mutate(Time = str_pad(gsub("h", "", Time), 2, pad="0")) %>%
-	mutate(sample_id = rownames(.)) %>%
-	arrange(StrainID, Time, Rep)
+	select(Genotype = X1, Time = X2, Rep = X3)
 
 # Reorder samples
 counts <- counts[, rownames(meta_data_rna)]
 
-# Reformat sample names
-colnames(counts) <- meta_data_rna$sample_id
-rownames(meta_data_rna) <- meta_data_rna$sample_id
 
 max_pval <- 0.05
 
 dds <- DESeqDataSetFromMatrix(countData = counts, colData = meta_data_rna, design = formula(~ Genotype + Time))
 dds <- DESeq(dds)
-res <- results(dds, contrast = c("Genotype","drnB","wt"))
+res <- results(dds, contrast = c("Genotype","drnBKO","wt"))
 dev_genes <- rownames(res)[which(res$padj < max_pval)]
 dev_genes
 
 # Do regularized log transformation, then plot all genes affected by developmental time in a heatmap
 rld  <- rlog(dds, blind=F)
 
-miRNAs <- micounts$Geneid
+miRNAs <- rownames(micounts)
 siRNAs <- c("DIRS1","TRE3B","SKIPPER_I","EnSpm-1_DDi","TRE3D","TRE3C")
 
 plotdat <- assay(rld)
@@ -1042,11 +1014,10 @@ plotdat <- assay(rld)
 colnames(plotdat) <- c("wt_0h_A","wt_0h_B","wt_0h_C","wt_16h_A","wt_16h_B",
                        "drnB-_0h_A","drnB-_0h_B","drnB-_0h_C","drnB-_16h_A","drnB-_16h_B")
 
-#png("plots/miRNA_drnB_heatmap.png",width=5,height=3.5,units="in",res=200)
+png("plots/miRNA_drnB_heatmap.png",width=5,height=3.5,units="in",res=200)
 a <- pheatmap(plotdat[c(miRNAs),], scale = "row", cluster_cols = F, heatmap_legend_param = list(title="z-score"))
 draw(a)
-#dev.off()
-
+dev.off()
 
 volc <- data.frame(logFC=res$log2FoldChange, negLogPval=-log10(res$padj), name=rownames(res), stringsAsFactors=F)
 
@@ -1065,6 +1036,7 @@ b <- ggplot(plotdat, aes(logFC, negLogPval, label = name, fill = type))+
   geom_point(shape = 21)+
   geom_text_repel(data = plotdat[plotdat$type == "miRNA",],max.overlaps = Inf, size = 3.5, box.padding = 0.5, force_pull = 0 )+coord_cartesian(xlim = c(-8,8))+
   theme_bw()+labs(y = "-log10(pval)", title = "drnB- vs wt")
+
 b
 ggsave("plots/drnB_miRNA_volcano.tiff",b,device = tiff, dpi = 200, width = 4, height = 3.5)
 
@@ -1072,31 +1044,23 @@ ggsave("plots/drnB_miRNA_volcano.tiff",b,device = tiff, dpi = 200, width = 4, he
 
 Growth of drnB- and wildtype strains was quantified and is plotted as growthcurves, and barplots with doubling time in hours.
 
-```{r drnBKO growthcurves, fig.height=3.5, fig.width=7.5, message=FALSE, warning=FALSE}
-kleb_counts <- data.frame(t(read.delim("data_in/growthcurve_counts/drnb_klebsiella.txt", header = F, row.names = 1)))
-kleb_growth <- pivot_longer(kleb_counts, -c(time, techrep))
-kleb_growth %>% mutate(time = as.numeric(time),
-                       value = as.numeric(value)*1e4) -> kleb_growth
+```{r drnBKO growthcurves, fig.height=3.5, fig.width=7.5}
 
 axenic_counts <- data.frame(t(read.delim("data_in/growthcurve_counts/drnb_axenic.txt", header = F, row.names = 1)))
 axenic_growth <- pivot_longer(axenic_counts, -c(time, techrep))
 axenic_growth %>% mutate(time = as.numeric(time),
                        value = as.numeric(value)*1e4) -> axenic_growth
 
-all_growth <- rbind(axenic_growth,kleb_growth)
-all_growth %>% separate(name, c("strain","growth","biorep"), "_", remove = F) -> all_growth
 
-all_growth$ID <- factor(paste(all_growth$strain,all_growth$growth,sep = "_"),
-                        levels = c("wt_klebsiella","drnb_klebsiella","wt_axenic","drnb_axenic"), 
-                        labels = c("wt klebsiella","drnB- klebsiella","wt axenic","drnB- axenic"))
+axenic_growth %>% separate(name, c("strain","growth","biorep"), "_", remove = F) -> all_growth
+all_growth$strain <- factor(all_growth$strain, levels = c("wt","drnb"))
 
-
-a <- ggplot(all_growth[all_growth$growth=="axenic",], aes(time, value, color = ID, shape = biorep))+
+a <- ggplot(all_growth, aes(time, value, color = strain, shape = biorep))+
   geom_point(size=2)+
   geom_smooth(method = "lm", se = F, linetype = "dashed", size = 0.5)+
   scale_y_log10()+
   scale_color_manual(values = c("#1F78B4","#33A02C"))+
-  labs(x = "Time (h)", y = "Number of cells / ml", color = "strain + growth condition")+
+  labs(x = "Time (h)", y = "Number of cells / ml", color = "strain")+
   scale_shape_manual(values = c(0,1,2,5))+
   theme(legend.title=element_text(size=10),
         panel.background = element_rect(fill = NA),
@@ -1107,41 +1071,39 @@ a <- ggplot(all_growth[all_growth$growth=="axenic",], aes(time, value, color = I
 
 
 doubling_times <- data.frame(cbind(doubling_time = round(1/coef(lmList(log2(value)~time|name , data = all_growth, na.action=na.exclude)),digits = 2)[,2],
-                        strain = rep(c("drnb","wt"), each = 7),
-                        growth = rep(c(rep("axenic" ,4),rep("klebsiella",3)),2))
+                        strain = rep(c("drnb","wt"), each = 4))
 )
 print(doubling_times)
 doubling_times$doubling_time <- round(as.numeric(doubling_times$doubling_time), digits = 2)
-doubling_times$ID <- factor(paste(doubling_times$strain, doubling_times$growth, sep = "_"),
-                            levels = c("wt_klebsiella","drnb_klebsiella","wt_axenic","drnb_axenic"))
 
 doubling_times %>% 
-  group_by(ID) %>%
+  group_by(strain) %>%
   summarise(mean_doubling_time = mean(doubling_time),
             std = sd(doubling_time)) -> plotdat
 
-
-ttests <- compare_means(doubling_time ~ ID, data = doubling_times, method = "t.test")
-plot_labels <- rep("",4)
-plot_labels[c(1,3)] <- paste0("p=",round(ttests$p,digits = 3))[c(1,6)]
+plotdat$strain <- factor(plotdat$strain, levels = c("wt","drnb"))
 
 
-b <- ggplot(plotdat[3:4,], aes(ID,mean_doubling_time))+
+ttests <- compare_means(doubling_time ~ strain, data = doubling_times, method = "t.test")
+plot_labels <- rep("",2)
+plot_labels[1] <- paste0("p=",round(ttests$p,digits = 3))
+
+
+b <- ggplot(plotdat, aes(strain,mean_doubling_time))+
   #geom_bar(stat = "identity", color = "black", fill = c("#A6CEE3","#1F78B4","#B2DF8A","#33A02C"))+
-  geom_bar(stat = "identity", color = "black", fill = c("#1F78B4","#33A02C"))+
-  geom_text(aes(label = round(mean_doubling_time, digits = 1)), vjust = 1.5)+
+  geom_bar(stat = "identity", color = "black", fill = c("#33A02C","#1F78B4"))+
+  geom_text(aes(label = paste0(round(mean_doubling_time, digits = 1),"h")), vjust = 1.5)+
   geom_errorbar(aes(ymin=mean_doubling_time,ymax=mean_doubling_time+std), width = .2)+
-  geom_text(aes(label = plot_labels[3:4], y=33), hjust = 0.1)+
+  geom_text(aes(label = plot_labels, y=33), hjust = 1.05)+
   labs(y = "Doubling time (h)", x = "")+
-  #scale_x_discrete(labels = c("wt klebsiella","drnB- klebsiella","wt axenic","drnB- axenic"))+
-  scale_x_discrete(labels = c("wt axenic","drnB- axenic"))+
-  theme(axis.text.x = element_text(color = "black", angle = 45, hjust = 1, size = 12),
+  scale_x_discrete(labels = c("wt","drnB-"))+
+  theme(axis.text.x = element_text(color = "black", angle = 0, hjust = 0.5, size = 12),
         panel.background = element_rect(fill = NA),
         panel.grid = element_line(colour = "grey90")
         #, panel.border = element_rect(size = 1, fill = NA)
         )
 
-arr_plot <- ggarrange(a,b, widths = c(3,1))
+arr_plot <- ggarrange(a,b, widths = c(5,2))
 
 arr_plot
 
