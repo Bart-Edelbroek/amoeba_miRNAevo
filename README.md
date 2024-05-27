@@ -1,5 +1,5 @@
-# amoeba_miRNAevo
-Identification and analysis of miRNAs in Amoebozoa.
+# Evolution of microRNAs in Amoebozoa
+Identification and analysis of miRNAs in Amoebozoa. Code and data accompanies the journal article "Evolution of microRNAs in Amoebozoa and implications for the origin of multicellularity" (https://doi.org/10.1093/nar/gkae109)
 
 ## microRNA curation
 Potential miRNA clusters, generated using Shortstack (https://github.com/MikeAxtell/ShortStack), are analyzed with **miRNA_curation.py**. An example run of the miRNA curation can be performed by running the 'example_run/explore_all.sh' and 'example_run/refine_all.sh' scripts in order. A sample of the sRNA sequences from *D. discoideum* is included in the 'example/example_sizeselected_data' folder. A sample of miRNA candidates are included in 'example_run/pot-miRNAs_merged.fa' to facilitate the example run. <br />
